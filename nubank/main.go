@@ -1,9 +1,10 @@
 package main
 
 import (
-	"exec"
+	"os/exec"
+	"fmt"
 )
 
 func main() {
-	exec.Command("echo", "hello")
+	fmt.Println(exec.Command("echo", "hello").CombinedOutput())
 }
