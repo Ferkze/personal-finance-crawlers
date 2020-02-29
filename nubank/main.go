@@ -9,8 +9,12 @@ import (
 	"time"
 )
 
+const (
+	NODE_RESOURCE_PREFIX = "com.nu.production:id/"
+)
+
 func main() {
-	screen := Hierarchy{}
+	screen := &Hierarchy{}
 	b, err := ioutil.ReadFile("screens/nubank_credit_entries.xml")
 	if err != nil {
 		log.Fatalf("ioutil.ReadFile failed with %s\n", err)
@@ -20,13 +24,14 @@ func main() {
 	}
 	log.Printf("%#v", screen)
 
-	// arr := searchNode(*screen)
+	entries := make([]NubankEntry, 0)
+	arr := searchHierarchy(screen)
 
-	// log.Printf("Text: %#v", arr)
+	log.Printf("Text: %#v\nEntries: %#v", arr, entries)
 
 }
 
-func searchNode(hierarchy Hierarchy) []string {
+func searchHierarchy(hierarchy *Hierarchy) []string {
 	var arr []string
 	for _, node := range hierarchy.Node.Node {
 		if node.AttrText != "" {
@@ -64,6 +69,11 @@ func searchNode(hierarchy Hierarchy) []string {
 		}
 	}
 	return arr
+}
+
+func searchNode() *NubankEntry {
+	e := &NubankEntry{}
+	return e
 }
 
 func nubank() {
