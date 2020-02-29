@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	NODE_RESOURCE_PREFIX = "com.nu.production:id/"
+// NODE_RESOURCE_PREFIX = "com.nu.production:id/"
 )
 
 func main() {
@@ -22,44 +22,33 @@ func main() {
 	if err := xml.Unmarshal(b, &screen); err != nil {
 		log.Fatalf("xml.Unmarshal failed with %s\n", err)
 	}
-	log.Printf("%#v", screen)
+	log.Printf("Found screen with %d bytes", len(b))
 
-	entries := make([]NubankEntry, 0)
-	arr := searchHierarchy(screen)
+	entries := searchHierarchy(screen)
 
-	log.Printf("Text: %#v\nEntries: %#v", arr, entries)
+	log.Printf("Entries found: %d", len(entries))
+
+	for i, entry := range entries {
+		log.Printf("Entry[%d]: %#v", i+1, entry)
+	}
 
 }
 
-func searchHierarchy(hierarchy *Hierarchy) []string {
-	var arr []string
-	for _, node := range hierarchy.Node.Node {
-		if node.AttrText != "" {
-			arr = append(arr, node.AttrText)
-		}
-		for _, node2 := range node.Node.Node.Node.Node.Node {
-			if node2.AttrText != "" {
-				arr = append(arr, node2.AttrText)
-			}
-			for _, node3 := range node2.Node.Node {
-				if node3.AttrText != "" {
-					arr = append(arr, node3.AttrText)
-				}
-				for _, node4 := range node3.Node.Node {
-					if node4.AttrText != "" {
-						arr = append(arr, node4.AttrText)
-					}
-					for _, node5 := range node4.Node {
-						if node5.AttrText != "" {
-							arr = append(arr, node5.AttrText)
-						}
-						for _, node6 := range node5.Node {
-							if node6.AttrText != "" {
-								arr = append(arr, node6.AttrText)
-							}
-							for _, node7 := range node6.Node {
-								if node7.AttrText != "" {
-									arr = append(arr, node7.AttrText)
+func searchHierarchy(hierarchy *Hierarchy) []*NubankEntry {
+	var entries []*NubankEntry
+	for _, parentNode := range hierarchy.Node.Node {
+		for _, parentNode2 := range parentNode.Node.Node.Node.Node.Node {
+			for _, parentNode3 := range parentNode2.Node.Node {
+				for _, parentNode4 := range parentNode3.Node.Node {
+					for _, parentNode5 := range parentNode4.Node {
+						for _, parentNode6 := range parentNode5.Node {
+							for _, parentNode7 := range parentNode6.Node {
+								if strings.Contains(parentNode7.ResourceID, "TV") {
+									if entry := searchNodes(parentNode6.Node); entry != nil {
+										entries = append(entries, entry)
+										log.Printf("Found entry, breaking parentNode6 loop...")
+										break
+									}
 								}
 							}
 						}
@@ -68,11 +57,25 @@ func searchHierarchy(hierarchy *Hierarchy) []string {
 			}
 		}
 	}
-	return arr
+	return entries
 }
 
-func searchNode() *NubankEntry {
+func searchNodes(nodes []LeafNode) *NubankEntry {
 	e := &NubankEntry{}
+	for _, node := range nodes {
+		if strings.Contains(node.ResourceID, "title") {
+			e.Category = node.AttrText
+		}
+		if strings.Contains(node.ResourceID, "description") {
+			e.Place = node.AttrText
+		}
+		if strings.Contains(node.ResourceID, "amount") {
+			e.Value = node.AttrText
+		}
+		if strings.Contains(node.ResourceID, "date") {
+			e.Time = node.AttrText
+		}
+	}
 	return e
 }
 
