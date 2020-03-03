@@ -1,0 +1,44 @@
+[
+    {
+        "Category": "Supermercado",
+        "Time": "18:52",
+        "Place": "Picnic Konbini",
+        "Value": 3
+    },
+    {
+        "Category": "Restaurante",
+        "Time": "Ontem",
+        "Place": "Mc Donalds Sbd",
+        "Value": 11.9
+    },
+    {
+        "Category": "Restaurante",
+        "Time": "Sábado",
+        "Place": "Panificadora Delivery",
+        "Value": 21.24
+    },
+    {
+        "Category": "Saúde",
+        "Time": "Sábado",
+        "Place": "Drogaria Espacial",
+        "Value": 15.68
+    },
+    {
+        "Category": "Restaurante",
+        "Time": "Sábado",
+        "Place": "Yanagi Cafeteria",
+        "Value": 11.9
+    },
+    {
+        "Category": "Casa",
+        "Time": "Sábado",
+        "Place": "Petz Pereira Barreto",
+        "Value": 23.99
+    },
+    {
+        "Category": "Casa",
+        "Time": "Sábado",
+        "Place": "Petz Pereira Barreto",
+        "Value": 23.99
+    }
+]

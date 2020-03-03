@@ -1,12 +1,13 @@
-package main
+package types
 
 import "encoding/xml"
 
+// NubankEntry entry data structure
 type NubankEntry struct {
 	Category string
 	Time     string
 	Place    string
-	Value    string
+	Value    float64
 }
 
 // Hierarchy - XML's hierarchy of nodes
