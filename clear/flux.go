@@ -2,6 +2,8 @@ package clear
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tebeka/selenium"
@@ -112,4 +114,67 @@ func filterOrders(d *selenium.WebDriver, start, end time.Time, operationType str
 	if err != nil { return }
 
 	return submitButton.Click()
+}
+
+// Order structure
+type Order struct {
+	Type string
+	Quantity int64
+	Price float64
+	Datetime time.Time	
+}
+
+func parseOrders(d *selenium.WebDriver) (orders []Order, err error) {
+	ordersURL := "https://novopit.clear.com.br/Operacoes/Ordens"
+	currentURL, err := (*d).CurrentURL()
+	if err != nil { return }
+	if currentURL != ordersURL {
+		err = (*d).Get(ordersURL)
+		if err != nil { return }
+	}
+
+	orderButtons, err := (*d).FindElements(selenium.ByCSSSelector, "#box-view-list-daytrade > li > section > div:nth-child(1) > nav > button")
+	if err != nil { return }
+
+	getExecutions := func(d *selenium.WebDriver) ([]Order, error) {
+		elements, _ := (*d).FindElements(selenium.ByCSSSelector, "#execution-list > li > div")
+		orders := make([]Order, len(elements))
+		
+		orderTypeEl, _ := (*d).FindElement(selenium.ByCSSSelector, "body > div.container.orders > div:nth-child(5) > section > div:nth-child(2) > div:nth-child(6) > label:nth-child(1) > span.order-side")
+		orderType, _ := orderTypeEl.Text()
+
+		for i := range elements {
+			selector := fmt.Sprintf("#execution-list > li > div > label:nth-child(%d) > span.execution-quantity", i+1)
+			infoEl, _ := (*d).FindElement(selenium.ByCSSSelector, selector)
+			quant, _ := infoEl.Text()
+			orders[i].Quantity, _ = strconv.ParseInt(quant, 10, 64)
+
+			selector = fmt.Sprintf("#execution-list > li > div > label:nth-child(%d) > span.execution-price", i+1)
+			infoEl, _ = (*d).FindElement(selenium.ByCSSSelector, selector)
+			price, _ := infoEl.Text()
+			priceFl, _ := strconv.ParseFloat(strings.ReplaceAll(strings.TrimSuffix(price, "R$ "), ",", "."), 64)
+			orders[i].Price = priceFl
+
+			selector = fmt.Sprintf("#execution-list > li > div > label:nth-child(%d) > span.execution-date", i+1)
+			infoEl, _ = (*d).FindElement(selenium.ByCSSSelector, selector)
+			date, _ := infoEl.Text()
+			orders[i].Datetime, _ = time.Parse("02/01/2006 15:04:05", date)
+			
+			orders[i].Type = orderType
+		}
+
+		return orders, nil
+	}
+
+	for _, btn := range orderButtons {
+		var executions []Order
+		btn.Click()
+		executions, err = getExecutions(d)
+		if err != nil {
+			return
+		}
+		orders = append(orders, executions...)
+	}
+
+	return
 }
