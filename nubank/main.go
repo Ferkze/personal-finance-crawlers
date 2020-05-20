@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/personal-finance-crawlers/nubank/types"
+	"github.com/ferkze/personal-finance-crawlers/nubank/types"
 )
 
 func main() {

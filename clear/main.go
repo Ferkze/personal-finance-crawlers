@@ -1,0 +1,5 @@
+package clear
+
+func main() {
+	
+}
