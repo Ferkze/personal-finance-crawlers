@@ -30,3 +30,17 @@ func login(d *selenium.WebDriver, cpf, password, dob string) (err error) {
 
 	return nil
 }
+
+func selectPit(d *selenium.WebDriver) (err error) {
+	pitSelectionURL := "https://www.clear.com.br/pit/Selector"
+	currentURL, err := (*d).CurrentURL()
+	if err != nil { return }
+	if currentURL != pitSelectionURL {
+		err = (*d).Get(pitSelectionURL)
+		if err != nil { return }
+	}
+	novopitLink, err := (*d).FindElement(selenium.ByCSSSelector, "#content_middle > div.middle > div.left > a")
+	if err != nil { return }
+
+	return novopitLink.Click()
+}
