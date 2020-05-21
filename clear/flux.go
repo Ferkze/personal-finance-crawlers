@@ -85,16 +85,14 @@ func navigateToOrders(d *selenium.WebDriver, pit string) (err error) {
 	return ordersLink.Click()
 }
 
-func filterOrders(d *selenium.WebDriver, start, end time.Time, operationType string) (err error) {
-	ordersURL := "https://novopit.clear.com.br/Operacoes/Ordens"
-	currentURL, err := (*d).CurrentURL()
-	if err != nil { return }
-	if currentURL != ordersURL {
-		err = (*d).Get(ordersURL)
-		if err != nil {
-			return
+
+	if pit == "novo" {
+		return newPitOrderFilters(d, start, end, operationType)
 		}
+	return mainPitOrderFilters(d, start, end, operationType)
 	}
+
+func newPitOrderFilters(d *selenium.WebDriver, start, end time.Time, operationType string) (err error) {
 
 	var checkboxes []selenium.WebElement
 
@@ -117,12 +115,18 @@ func filterOrders(d *selenium.WebDriver, start, end time.Time, operationType str
 	(*d).ExecuteScript("document.querySelector('#input-date-start').removeAttribute('readonly')", nil)
 	dateStartField, err := (*d).FindElement(selenium.ByID, "input-date-start")
 	if err != nil { return }
-	dateStartField.SendKeys(start.Format("02/01/2006"))
+	err = dateStartField.Clear()
+	if err != nil { return }
+	err = dateStartField.SendKeys(start.Format("02/01/2006"))
+	if err != nil { return }
 
 	(*d).ExecuteScript("document.querySelector('#input-date-end').removeAttribute('readonly')", nil)
 	dateEndField, err := (*d).FindElement(selenium.ByID, "input-date-end")
 	if err != nil { return }
-	dateEndField.SendKeys(end.Format("02/01/2006"))
+	err = dateEndField.Clear()
+	if err != nil { return }
+	err = dateEndField.SendKeys(end.Format("02/01/2006"))
+	if err != nil { return }
 
 	statusSelection, err := (*d).FindElement(selenium.ByID, "select-status")
 	if err != nil { return }
@@ -130,6 +134,30 @@ func filterOrders(d *selenium.WebDriver, start, end time.Time, operationType str
 	statusSelection.SendKeys(selenium.EnterKey)
 
 	submitButton, err := (*d).FindElement(selenium.ByID, "body > div.container.orders > div.container_left_ords > div > div.container_filter > div > div:nth-child(5) > button")
+	if err != nil { return }
+
+	return submitButton.Click()
+}
+
+func mainPitOrderFilters(d *selenium.WebDriver, start, end time.Time, operationType string) (err error) {
+	switch operationType {
+	case "day_trade":
+		_, err = (*d).ExecuteScript("document.querySelector('#content_middle > div:nth-child(1) > div > label:nth-child(2) > input').checked = false", nil)
+		_, err = (*d).ExecuteScript("document.querySelector('#content_middle > div:nth-child(1) > div > label:nth-child(3) > input').checked = true", nil)
+	case "swing_trade":
+		_, err = (*d).ExecuteScript("document.querySelector('#content_middle > div:nth-child(1) > div > label:nth-child(2) > input').checked = true", nil)
+		_, err = (*d).ExecuteScript("document.querySelector('#content_middle > div:nth-child(1) > div > label:nth-child(3) > input').checked = false", nil)
+	}
+
+	_, err = (*d).ExecuteScript(fmt.Sprintf("document.querySelector('#datefilter').value = '%s'", start.Format("02/01/2006")), nil)
+	if err != nil { fmt.Printf("Error injecting script: %v\n", err) }
+	_, err = (*d).ExecuteScript(fmt.Sprintf("document.querySelector('#datefilterend').value = '%s'", end.Format("02/01/2006")), nil)
+	if err != nil { fmt.Printf("Error injecting script: %v\n", err) }
+
+	_, err = (*d).ExecuteScript(fmt.Sprintf("document.querySelector('#status').value = '%s'", "WithExecutions"), nil)
+	if err != nil { fmt.Printf("Error injecting script: %v\n", err) }
+
+	submitButton, err := (*d).FindElement(selenium.ByID, "btnSearchForOrders")
 	if err != nil { return }
 
 	return submitButton.Click()

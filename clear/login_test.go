@@ -19,12 +19,17 @@ func iFillTheLoginForm() error {
 }
 	return login(&Driver, acc)
 }
-
 func iGetRedirectedToThePitSelection() (err error) {
-	return selectPit(&Driver)
+	return selectPit(&Driver, "main")
 }
 func iCanAccessTheOrdersPage() error {
-	return navigateToOrders(&Driver)
+	return navigateToOrders(&Driver, "main")
+}
+func iCanFilterMyOrders() error {
+	start, _ := time.Parse("02/01/2006", "13/05/2020")
+	end, _ := time.Parse("02/01/2006", "18/05/2020")
+	
+	return filterOrders(&Driver, "main", start, end, "day_trade")
 }
 
 func FeatureContext(s *godog.Suite) {
@@ -32,6 +37,7 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^I fill the login form$`, iFillTheLoginForm)
 	s.Step(`^I get redirected to the pit selection$`, iGetRedirectedToThePitSelection)
 	s.Step(`^I can access the orders page$`, iCanAccessTheOrdersPage)
+	s.Step(`^I can filter my orders$`, iCanFilterMyOrders)
 
 	s.BeforeScenario(func(*messages.Pickle) {
 		Driver = support.WBInit()

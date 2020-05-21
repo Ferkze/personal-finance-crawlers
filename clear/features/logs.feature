@@ -12,3 +12,4 @@ Feature: Get trading transaction records
     When I fill the login form
     Then I get redirected to the pit selection
     And I can access the orders page
+    And I can filter my orders
