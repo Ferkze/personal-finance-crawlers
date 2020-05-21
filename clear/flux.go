@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ferkze/personal-finance-crawlers/clear/types"
 	"github.com/tebeka/selenium"
 )
 
@@ -95,12 +96,12 @@ func filterOrders(d *selenium.WebDriver, start, end time.Time, operationType str
 		checkbox.Click()
 	}
 
-	(*d).ExecuteScript("document.querySelector('#input-date-start').removeAttribute('readonly')")
+	(*d).ExecuteScript("document.querySelector('#input-date-start').removeAttribute('readonly')", nil)
 	dateStartField, err := (*d).FindElement(selenium.ByID, "input-date-start")
 	if err != nil { return }
 	dateStartField.SendKeys(start.Format("02/01/2006"))
 
-	(*d).ExecuteScript("document.querySelector('#input-date-end').removeAttribute('readonly')")
+	(*d).ExecuteScript("document.querySelector('#input-date-end').removeAttribute('readonly')", nil)
 	dateEndField, err := (*d).FindElement(selenium.ByID, "input-date-end")
 	if err != nil { return }
 	dateEndField.SendKeys(end.Format("02/01/2006"))
@@ -124,7 +125,7 @@ type Order struct {
 	Datetime time.Time	
 }
 
-func parseOrders(d *selenium.WebDriver) (orders []Order, err error) {
+func parseOrders(d *selenium.WebDriver) (orders []types.Execution, err error) {
 	ordersURL := "https://novopit.clear.com.br/Operacoes/Ordens"
 	currentURL, err := (*d).CurrentURL()
 	if err != nil { return }
@@ -136,12 +137,18 @@ func parseOrders(d *selenium.WebDriver) (orders []Order, err error) {
 	orderButtons, err := (*d).FindElements(selenium.ByCSSSelector, "#box-view-list-daytrade > li > section > div:nth-child(1) > nav > button")
 	if err != nil { return }
 
-	getExecutions := func(d *selenium.WebDriver) ([]Order, error) {
+	getExecutions := func(d *selenium.WebDriver) ([]types.Execution, error) {
 		elements, _ := (*d).FindElements(selenium.ByCSSSelector, "#execution-list > li > div")
-		orders := make([]Order, len(elements))
+		orders := make([]types.Execution, len(elements))
 		
 		orderTypeEl, _ := (*d).FindElement(selenium.ByCSSSelector, "body > div.container.orders > div:nth-child(5) > section > div:nth-child(2) > div:nth-child(6) > label:nth-child(1) > span.order-side")
 		orderType, _ := orderTypeEl.Text()
+
+		assetEl, _ := (*d).FindElement(selenium.ByCSSSelector, "body > div.container.orders > div:nth-child(5) > section > div:nth-child(2) > p.order-symbol")
+		asset, _ := assetEl.Text()
+
+		assetTypeEl, _ := (*d).FindElement(selenium.ByCSSSelector, "body > div.container.orders > div:nth-child(5) > section > div:nth-child(2) > div:nth-child(7) > label:nth-child(4) > span.order-market")
+		assetType, _ := assetTypeEl.Text()
 
 		for i := range elements {
 			selector := fmt.Sprintf("#execution-list > li > div > label:nth-child(%d) > span.execution-quantity", i+1)
@@ -160,14 +167,16 @@ func parseOrders(d *selenium.WebDriver) (orders []Order, err error) {
 			date, _ := infoEl.Text()
 			orders[i].Datetime, _ = time.Parse("02/01/2006 15:04:05", date)
 			
-			orders[i].Type = orderType
+			orders[i].Asset = asset
+			orders[i].AssetType = assetType
+			orders[i].OrderType = orderType
 		}
 
 		return orders, nil
 	}
 
 	for _, btn := range orderButtons {
-		var executions []Order
+		var executions []types.Execution
 		btn.Click()
 		executions, err = getExecutions(d)
 		if err != nil {
