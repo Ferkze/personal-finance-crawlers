@@ -10,22 +10,33 @@ import (
 	"github.com/tebeka/selenium"
 )
 
+func checkoutPageOrRedirect(d *selenium.WebDriver, url string) (err error) {
+	current, err := (*d).CurrentURL()
+	if err != nil {
+		return
+	}
+
+	if current != url {
+		return (*d).Get(url)
+	}
+	return
+}
+
 // logins using cpf, password and date_of_birth
-func login(d *selenium.WebDriver, cpf, password, dob string) (err error) {
-	err = (*d).Get("https://www.clear.com.br/pit/signin?controller=SignIn")
-	if err != nil { return }
+func login(d *selenium.WebDriver, acc types.Account) (err error) {
+	if err = checkoutPageOrRedirect(d, "https://www.clear.com.br/pit/signin?controller=SignIn"); err != nil { return }
 
 	cpfField, err := (*d).FindElement(selenium.ByCSSSelector, "#identificationNumber")
 	if err != nil { return }
-	cpfField.SendKeys(cpf)
+	cpfField.SendKeys(acc.CPF)
 
 	passwordField, err := (*d).FindElement(selenium.ByCSSSelector, "#password")
 	if err != nil { return }
-	passwordField.SendKeys(password)
+	passwordField.SendKeys(acc.Password)
 
 	dobField, err := (*d).FindElement(selenium.ByCSSSelector, "#dob")
 	if err != nil { return }
-	dobField.SendKeys(dob)
+	dobField.SendKeys(acc.DateOfBirth)
 
 	submitButton, err := (*d).FindElement(selenium.ByCSSSelector, "#form_id > input.bt_signin")
 	if err != nil { return }
@@ -34,31 +45,38 @@ func login(d *selenium.WebDriver, cpf, password, dob string) (err error) {
 	return nil
 }
 
-func selectPit(d *selenium.WebDriver) (err error) {
-	pitSelectionURL := "https://www.clear.com.br/pit/Selector"
-	currentURL, err := (*d).CurrentURL()
-	if err != nil { return }
-	if currentURL != pitSelectionURL {
-		err = (*d).Get(pitSelectionURL)
-		if err != nil { return }
+func selectPit(d *selenium.WebDriver, pit string) (err error) {
+	if err = checkoutPageOrRedirect(d, "https://www.clear.com.br/pit/Selector"); err != nil { return }
+
+	if pit == "" {
+		pit = "antigo"
 	}
-	novopitLink, err := (*d).FindElement(selenium.ByCSSSelector, "#content_middle > div.middle > div.left > a")
+	
+	selector := "#content_middle > div.middle > div.right > a"
+	if pit == "novo" {
+		selector = "#content_middle > div.middle > div.left > a"
+	}
+
+	pitLink, err := (*d).FindElement(selenium.ByCSSSelector, selector)
 	if err != nil { return }
 
-	return novopitLink.Click()
+	err = pitLink.Click()
+	if err != nil { return }
+
+	current, err := (*d).CurrentURL()
+	if err != nil { return }
+
+	if pit == "novo" && !strings.HasPrefix(current, "https://novopit") {
+		return fmt.Errorf("A seleção do pit não redirecionou para o Novo Pit")
+	} else if pit == "antigo" && current != "https://www.clear.com.br/pit" {
+		return fmt.Errorf("A seleção do pit não redirecionou para o Pit Antigo")
+	}
+	return 
 }
 
 func navigateToOrders(d *selenium.WebDriver) (err error) {
-	ordersURL := "https://novopit.clear.com.br/Operacoes/Ordens"
-	currentURL, err := (*d).CurrentURL()
-	if err != nil { return }
-
-	if currentURL != ordersURL {
-		err = (*d).Get(ordersURL)
-		if err == nil {
-			return nil
-		}
-		fmt.Println("Erro ao navegar para a tela de ordens:", err.Error())
+	if err = checkoutPageOrRedirect(d, "https://novopit.clear.com.br/Operacoes/Ordens"); err != nil {
+		return
 	}
 
 	ordersLink, err := (*d).FindElement(selenium.ByCSSSelector, "body > div > div > nav > ul:nth-child(3) > li:nth-child(4) > a")
@@ -185,5 +203,16 @@ func parseOrders(d *selenium.WebDriver) (orders []types.Execution, err error) {
 		orders = append(orders, executions...)
 	}
 
+	return
+}
+
+func checkAndClosePopup(d *selenium.WebDriver) (err error) {
+	el, err := (*d).FindElement(selenium.ByCSSSelector, "#disclaimer_tyform > div")
+	if err != nil { return }
+	isDisplayed, err := el.IsDisplayed()
+	if err != nil { return }
+	if !isDisplayed {
+		return
+	}
 	return
 }

@@ -11,3 +11,4 @@ Feature: Get trading transaction records
   Scenario: Successful Login
     When I fill the login form
     Then I get redirected to the pit selection
+    And I can access the orders page
