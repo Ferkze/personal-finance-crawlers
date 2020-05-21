@@ -74,10 +74,10 @@ func selectPit(d *selenium.WebDriver, pit string) (err error) {
 	return 
 }
 
-func navigateToOrders(d *selenium.WebDriver) (err error) {
-	if err = checkoutPageOrRedirect(d, "https://novopit.clear.com.br/Operacoes/Ordens"); err != nil {
-		return
-	}
+func navigateToOrders(d *selenium.WebDriver, pit string) (err error) {
+	url := OldPitOrdersURL
+	if pit == "novo" { url = NewPitOrdersURL }
+	if err = checkoutPageOrRedirect(d, url); err != nil { return }
 
 	ordersLink, err := (*d).FindElement(selenium.ByCSSSelector, "body > div > div > nav > ul:nth-child(3) > li:nth-child(4) > a")
 	if err != nil { return }
