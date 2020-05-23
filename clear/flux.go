@@ -2,7 +2,6 @@ package clear
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,8 +15,16 @@ func checkoutPageOrRedirect(d *selenium.WebDriver, url string) (err error) {
 		return
 	}
 
-	if current != url {
-		return (*d).Get(url)
+	if !strings.Contains(current, url) {
+		fmt.Printf("Redirecionando à URL: %v\n", url)
+		time.Sleep(1 * time.Second)
+		err = (*d).Get(url)
+		if err != nil { return }
+		current, err = (*d).CurrentURL()
+		if err != nil { return }
+		if !strings.Contains(current, url) {
+			return fmt.Errorf("Não foi possível redirecionar para a url %s", url)
+		}
 	}
 	return
 }
@@ -49,7 +56,7 @@ func selectPit(d *selenium.WebDriver, pit string) (err error) {
 	if err = checkoutPageOrRedirect(d, "https://www.clear.com.br/pit/Selector"); err != nil { return }
 
 	if pit == "" {
-		pit = "antigo"
+		pit = "main"
 	}
 	
 	selector := "#content_middle > div.middle > div.right > a"
@@ -57,40 +64,67 @@ func selectPit(d *selenium.WebDriver, pit string) (err error) {
 		selector = "#content_middle > div.middle > div.left > a"
 	}
 
-	pitLink, err := (*d).FindElement(selenium.ByCSSSelector, selector)
-	if err != nil { return }
+	time.Sleep(3 * time.Second)
 
-	err = pitLink.Click()
-	if err != nil { return }
+	_, err = (*d).ExecuteScript(fmt.Sprintf("window.location.href = document.querySelector('%s').getAttribute('href')", selector), nil)
+	if err != nil {
+		fmt.Printf("Error injecting script: %v\n", err)
+	}
 
 	current, err := (*d).CurrentURL()
 	if err != nil { return }
 
+	if strings.Contains(current, "SignIn") {
+		acc := types.Account{
+			CPF: "48574314838",
+			DateOfBirth: "16062000",
+			Password: "091136",
+		}
+		err = login(d, acc)
+		if err != nil { return }
+		return checkoutPageOrRedirect(d, OldPitURL)
+	}
 	if pit == "novo" && !strings.HasPrefix(current, "https://novopit") {
 		return fmt.Errorf("A seleção do pit não redirecionou para o Novo Pit")
-	} else if pit == "antigo" && current != "https://www.clear.com.br/pit" {
-		return fmt.Errorf("A seleção do pit não redirecionou para o Pit Antigo")
+	} else if pit == "main" && current != "https://www.clear.com.br/pit" {
+		return fmt.Errorf("A seleção do pit não redirecionou para o Pit Main")
 	}
 	return 
 }
 
 func navigateToOrders(d *selenium.WebDriver, pit string) (err error) {
 	url := OldPitOrdersURL
-	if pit == "novo" { url = NewPitOrdersURL }
-	if err = checkoutPageOrRedirect(d, url); err != nil { return }
+	selector := "#nav-menu > li:nth-child(2) > ul > li.Orders > a"
+	if pit == "novo" {
+		url = NewPitOrdersURL
+		selector = "body > div > div > nav > ul:nth-child(3) > li:nth-child(4) > a"
+	}
+	if err = checkoutPageOrRedirect(d, url); err == nil {
+		if err := checkAndClosePopup(d, pit); err != nil {
+			fmt.Println("Erro ao fechar o popup:", err.Error())
+		}
+		return
+	}
+	fmt.Printf("Erro ao redirecionar à página de ordens: %v\n", err.Error())
 
-	ordersLink, err := (*d).FindElement(selenium.ByCSSSelector, "body > div > div > nav > ul:nth-child(3) > li:nth-child(4) > a")
+	ordersLink, err := (*d).FindElement(selenium.ByCSSSelector, selector)
 	if err != nil { return }
 
 	return ordersLink.Click()
 }
 
+func filterOrders(d *selenium.WebDriver, pit string, start, end time.Time, operationType string) (err error) {
+	ordersURL := OldPitOrdersURL
+	if pit == "novo" {
+		ordersURL = NewPitOrdersURL
+	}
+	if err = checkoutPageOrRedirect(d, ordersURL); err != nil { return }
 
 	if pit == "novo" {
 		return newPitOrderFilters(d, start, end, operationType)
-		}
-	return mainPitOrderFilters(d, start, end, operationType)
 	}
+	return mainPitOrderFilters(d, start, end, operationType)
+}
 
 func newPitOrderFilters(d *selenium.WebDriver, start, end time.Time, operationType string) (err error) {
 
@@ -160,87 +194,26 @@ func mainPitOrderFilters(d *selenium.WebDriver, start, end time.Time, operationT
 	submitButton, err := (*d).FindElement(selenium.ByID, "btnSearchForOrders")
 	if err != nil { return }
 
-	return submitButton.Click()
+	err = submitButton.Click()
+
+	time.Sleep(2 * time.Second)
+
+	return 
 }
 
-// Order structure
-type Order struct {
-	Type string
-	Quantity int64
-	Price float64
-	Datetime time.Time	
-}
-
-func parseOrders(d *selenium.WebDriver) (orders []types.Execution, err error) {
-	ordersURL := "https://novopit.clear.com.br/Operacoes/Ordens"
-	currentURL, err := (*d).CurrentURL()
-	if err != nil { return }
-	if currentURL != ordersURL {
-		err = (*d).Get(ordersURL)
-		if err != nil { return }
+func checkAndClosePopup(d *selenium.WebDriver, pit string) (err error) {
+	selector := "#ipo_close"
+	if pit == "novo" {
+		selector = "#disclaimer_tyform > div"
 	}
-
-	orderButtons, err := (*d).FindElements(selenium.ByCSSSelector, "#box-view-list-daytrade > li > section > div:nth-child(1) > nav > button")
-	if err != nil { return }
-
-	getExecutions := func(d *selenium.WebDriver) ([]types.Execution, error) {
-		elements, _ := (*d).FindElements(selenium.ByCSSSelector, "#execution-list > li > div")
-		orders := make([]types.Execution, len(elements))
-		
-		orderTypeEl, _ := (*d).FindElement(selenium.ByCSSSelector, "body > div.container.orders > div:nth-child(5) > section > div:nth-child(2) > div:nth-child(6) > label:nth-child(1) > span.order-side")
-		orderType, _ := orderTypeEl.Text()
-
-		assetEl, _ := (*d).FindElement(selenium.ByCSSSelector, "body > div.container.orders > div:nth-child(5) > section > div:nth-child(2) > p.order-symbol")
-		asset, _ := assetEl.Text()
-
-		assetTypeEl, _ := (*d).FindElement(selenium.ByCSSSelector, "body > div.container.orders > div:nth-child(5) > section > div:nth-child(2) > div:nth-child(7) > label:nth-child(4) > span.order-market")
-		assetType, _ := assetTypeEl.Text()
-
-		for i := range elements {
-			selector := fmt.Sprintf("#execution-list > li > div > label:nth-child(%d) > span.execution-quantity", i+1)
-			infoEl, _ := (*d).FindElement(selenium.ByCSSSelector, selector)
-			quant, _ := infoEl.Text()
-			orders[i].Quantity, _ = strconv.ParseInt(quant, 10, 64)
-
-			selector = fmt.Sprintf("#execution-list > li > div > label:nth-child(%d) > span.execution-price", i+1)
-			infoEl, _ = (*d).FindElement(selenium.ByCSSSelector, selector)
-			price, _ := infoEl.Text()
-			priceFl, _ := strconv.ParseFloat(strings.ReplaceAll(strings.TrimSuffix(price, "R$ "), ",", "."), 64)
-			orders[i].Price = priceFl
-
-			selector = fmt.Sprintf("#execution-list > li > div > label:nth-child(%d) > span.execution-date", i+1)
-			infoEl, _ = (*d).FindElement(selenium.ByCSSSelector, selector)
-			date, _ := infoEl.Text()
-			orders[i].Datetime, _ = time.Parse("02/01/2006 15:04:05", date)
-			
-			orders[i].Asset = asset
-			orders[i].AssetType = assetType
-			orders[i].OrderType = orderType
-		}
-
-		return orders, nil
-	}
-
-	for _, btn := range orderButtons {
-		var executions []types.Execution
-		btn.Click()
-		executions, err = getExecutions(d)
-		if err != nil {
-			return
-		}
-		orders = append(orders, executions...)
-	}
-
-	return
-}
-
-func checkAndClosePopup(d *selenium.WebDriver) (err error) {
-	el, err := (*d).FindElement(selenium.ByCSSSelector, "#disclaimer_tyform > div")
+	el, err := (*d).FindElement(selenium.ByCSSSelector, selector)
+	
+	
 	if err != nil { return }
 	isDisplayed, err := el.IsDisplayed()
 	if err != nil { return }
 	if !isDisplayed {
 		return
 	}
-	return
+	return el.Click()
 }

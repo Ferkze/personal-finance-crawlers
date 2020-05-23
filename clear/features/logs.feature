@@ -11,5 +11,6 @@ Feature: Get trading transaction records
   Scenario: Successful Login
     When I fill the login form
     Then I get redirected to the pit selection
-    And I can access the orders page
-    And I can filter my orders
+    And I can access orders page
+    And I can filter orders
+    And I can extract day trade orders
