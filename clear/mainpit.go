@@ -11,6 +11,33 @@ import (
 	"github.com/tebeka/selenium"
 )
 
+func filterMainPitOrders(d *selenium.WebDriver, start, end time.Time, operationType string) (err error) {
+	switch operationType {
+	case "day_trade":
+		_, err = (*d).ExecuteScript("document.querySelector('#content_middle > div:nth-child(1) > div > label:nth-child(2) > input').checked = false", nil)
+		_, err = (*d).ExecuteScript("document.querySelector('#content_middle > div:nth-child(1) > div > label:nth-child(3) > input').checked = true", nil)
+	case "swing_trade":
+		_, err = (*d).ExecuteScript("document.querySelector('#content_middle > div:nth-child(1) > div > label:nth-child(2) > input').checked = true", nil)
+		_, err = (*d).ExecuteScript("document.querySelector('#content_middle > div:nth-child(1) > div > label:nth-child(3) > input').checked = false", nil)
+	}
+
+	_, err = (*d).ExecuteScript(fmt.Sprintf("document.querySelector('#datefilter').value = '%s'", start.Format("02/01/2006")), nil)
+	if err != nil { fmt.Printf("Error injecting script: %v\n", err) }
+	_, err = (*d).ExecuteScript(fmt.Sprintf("document.querySelector('#datefilterend').value = '%s'", end.Format("02/01/2006")), nil)
+	if err != nil { fmt.Printf("Error injecting script: %v\n", err) }
+
+	_, err = (*d).ExecuteScript(fmt.Sprintf("document.querySelector('#status').value = '%s'", "WithExecutions"), nil)
+	if err != nil { fmt.Printf("Error injecting script: %v\n", err) }
+
+	submitButton, err := (*d).FindElement(selenium.ByID, "btnSearchForOrders")
+	if err != nil { return }
+
+	err = submitButton.Click()
+
+	time.Sleep(3 * time.Second)
+
+	return 
+}
 
 func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error) {
 	if !support.IsCurrentInURL(d, OldPitOrdersURL) {
