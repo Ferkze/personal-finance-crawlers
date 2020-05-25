@@ -16,7 +16,7 @@ func WBInit() selenium.WebDriver {
 	})
 	driver, err = selenium.NewRemote(caps, "")
 	if err != nil {
-		fmt.Println("Erro ao instanciar o driver:", err.Error())
+		panic(fmt.Errorf("Erro ao instanciar o driver: %s", err.Error()))
 	}
 
 	driver.ResizeWindow("note", 1280, 800)
