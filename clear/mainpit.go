@@ -12,17 +12,25 @@ import (
 )
 
 
-func parseMainPitOrders(d *selenium.WebDriver) (err error) {
+func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error) {
 	if !support.IsCurrentInURL(d, OldPitOrdersURL) {
 		err = fmt.Errorf("A página de ordens não está carregada")
 		return
 	}
 
+	var ordersSelector string
+	switch operationType {
+	case "day_trade":
+		ordersSelector = "#content_middle > div.container_middle > ul > li:nth-child(1) > div:nth-child(5) > div > div.content_right_orders > div > div.orderlistcontainer > div.container_s_orders.Main > ul > li"
+	case "swing_trade":
+		ordersSelector = "#content_middle > div.container_middle > ul > li:nth-child(1) > div:nth-child(4) > div > div.content_right_orders > div > div.orderlistcontainer > div.container_s_orders.Main > ul > li"
+	}
+
 	ordersEls, err := (*d).FindElements(selenium.ByCSSSelector, "#content_middle > div.container_middle > ul > li:nth-child(1) > div.drop-shadow.lifted.orderbar.xls > div > div.content_right_orders > div > div.orderlistcontainer > div.container_s_orders.Main > ul > li")
 	if err != nil { return }
 
-	getExecutions := func(d *selenium.WebDriver, index int) (orders []types.Execution, err error) {
-		baseSelector := fmt.Sprintf("#content_middle > div.container_middle > ul > li:nth-child(1) > div.drop-shadow.lifted.orderbar.xls > div > div.content_right_orders > div > div.orderlistcontainer > div.container_s_orders.Main > ul > li:nth-child(%d)", index)
+	getExecutions := func(d *selenium.WebDriver, selector string, index int) (orders []types.Execution, err error) {
+		baseSelector := fmt.Sprintf("%s:nth-child(%d)", selector, index)
 		// o, _ := (*d).FindElement(selenium.ByCSSSelector, baseSelector)
 
 		// _, err = (*d).ExecuteScript(fmt.Sprintf("var s = document.querySelector('%s > div > h5') %s", baseSelector, strings.Repeat(";s.removeChild(s.lastElementChild)", 2)), nil)
@@ -30,22 +38,26 @@ func parseMainPitOrders(d *selenium.WebDriver) (err error) {
 		// 	fmt.Printf("Erro ao executar o script para deletar a sujeira do nome do ativo, continuando: %s", err.Error())
 		// 	// return orders, err
 		// }
-		// assetEl, err := (*d).FindElement(selenium.ByCSSSelector,  baseSelector+" > div > h5")
-		// if err != nil { return orders, err }
-		// asset, err := assetEl.Text()
-		// if err != nil { return orders, err }
+		assetEl, err := (*d).FindElement(selenium.ByCSSSelector,  baseSelector+" > div > h5")
+		if err != nil { return orders, err }
+		assetText, err := assetEl.Text()
+		if err != nil { return orders, err }
+		asset := strings.Split(assetText, " ")[0]
+		fmt.Printf("AssetText: %s\nAsset extracted: %s\n", assetText, asset)
+		var orderType string
+		if strings.Contains(assetText, "Venda") {
+			orderType = "Venda"
+		} else if strings.Contains(assetText, "Compra") {
+			orderType = "Compra"
+		}
 
-		// _, err = (*d).ExecuteScript(fmt.Sprintf("var s = document.querySelector('%s > div > h5') %s", baseSelector, strings.Repeat(";s.removeChild(s.lastElementChild)", 2)), nil)
-		// if err != nil {
-		// 	fmt.Printf("Erro ao executar o script para deletar a sujeira do nome do ativo, continuando: %s", err.Error())
-		// 	// return orders, err
-		// }
-		// assetEl, err := (*d).FindElement(selenium.ByCSSSelector,  baseSelector+" > div > h5")
-		// if err != nil { return orders, err }
-		// asset, err := assetEl.Text()
-		// if err != nil { return orders, err }
+		var assetType string
+		if strings.Contains(assetText, "WIN") || strings.Contains(assetText, "WDO") || strings.Contains(assetText, "IND") || strings.Contains(assetText, "DOL") {
+			assetType = "futuros"
+		} else {
+			assetType = "acoes"
+		}
 
-		
 		detailsButton, _ := (*d).FindElement(selenium.ByCSSSelector, baseSelector + " > div > div > div.container-orders-status > a")
 		if err := detailsButton.Click(); err != nil { return orders, err }
 
@@ -89,9 +101,9 @@ func parseMainPitOrders(d *selenium.WebDriver) (err error) {
 			date, _ := infoEl.Text()
 			e.Datetime, _ = time.Parse("02/01/2006 15:04:05", date)
 			
-			// e.Asset = asset
-			// e.AssetType = assetType
-			// e.OrderType = orderType
+			e.Asset = asset
+			e.AssetType = assetType
+			e.OrderType = orderType
 
 			orders = append(orders, e)
 		}
@@ -106,7 +118,7 @@ func parseMainPitOrders(d *selenium.WebDriver) (err error) {
 
 	for i := range ordersEls {
 		var executions []types.Execution
-		executions, err = getExecutions(d, i+1)
+		executions, err = getExecutions(d, ordersSelector, i+1)
 		if err != nil {
 			return
 		}
