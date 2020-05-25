@@ -28,13 +28,13 @@ func iCanAccessOrdersPage() error {
 	return navigateToOrders(&Driver, "main")
 }
 func iCanFilterOrders() error {
-	start, _ := time.Parse("02/01/2006", "13/05/2020")
-	end, _ := time.Parse("02/01/2006", "18/05/2020")
+	start, _ := time.Parse("02/01/2006", "25/05/2020")
+	end, _ := time.Parse("02/01/2006", "25/05/2020")
 	
 	return filterOrders(&Driver, "main", start, end, "day_trade")
 }
 func iCanExtractDayTradeOrders() error {
-	return parseMainPitOrders(&Driver)
+	return parseMainPitOrders(&Driver, "day_trade")
 }
 
 func FeatureContext(s *godog.Suite) {
