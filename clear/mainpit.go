@@ -48,29 +48,23 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 	var ordersSelector string
 	switch operationType {
 	case "day_trade":
-		ordersSelector = "#content_middle > div.container_middle > ul > li:nth-child(1) > div:nth-child(5) > div > div.content_right_orders > div > div.orderlistcontainer > div.container_s_orders.Main > ul > li"
+		ordersSelector = `#content_middle > div.container_middle > ul > li:nth-child(1) > div[data-type="DayTrade"] > div > div.content_right_orders > div > div.orderlistcontainer > div.container_s_orders > ul > li`
 	case "swing_trade":
-		ordersSelector = "#content_middle > div.container_middle > ul > li:nth-child(1) > div:nth-child(4) > div > div.content_right_orders > div > div.orderlistcontainer > div.container_s_orders.Main > ul > li"
+		ordersSelector = `#content_middle > div.container_middle > ul > li:nth-child(1) > div[data-type="SwingTrade"] > div > div.content_right_orders > div > div.orderlistcontainer > div.container_s_orders > ul > li`
 	}
 
-	ordersEls, err := (*d).FindElements(selenium.ByCSSSelector, "#content_middle > div.container_middle > ul > li:nth-child(1) > div.drop-shadow.lifted.orderbar.xls > div > div.content_right_orders > div > div.orderlistcontainer > div.container_s_orders.Main > ul > li")
+	ordersEls, err := (*d).FindElements(selenium.ByCSSSelector, ordersSelector)
 	if err != nil { return }
 
 	getExecutions := func(d *selenium.WebDriver, selector string, index int) (orders []types.Execution, err error) {
 		baseSelector := fmt.Sprintf("%s:nth-child(%d)", selector, index)
-		// o, _ := (*d).FindElement(selenium.ByCSSSelector, baseSelector)
-
-		// _, err = (*d).ExecuteScript(fmt.Sprintf("var s = document.querySelector('%s > div > h5') %s", baseSelector, strings.Repeat(";s.removeChild(s.lastElementChild)", 2)), nil)
-		// if err != nil {
-		// 	fmt.Printf("Erro ao executar o script para deletar a sujeira do nome do ativo, continuando: %s", err.Error())
-		// 	// return orders, err
-		// }
+		
 		assetEl, err := (*d).FindElement(selenium.ByCSSSelector,  baseSelector+" > div > h5")
 		if err != nil { return orders, err }
 		assetText, err := assetEl.Text()
 		if err != nil { return orders, err }
-		asset := strings.Split(assetText, " ")[0]
-		fmt.Printf("AssetText: %s\nAsset extracted: %s\n", assetText, asset)
+		asset := strings.TrimSpace(strings.Split(assetText, "\n")[0])
+
 		var orderType string
 		if strings.Contains(assetText, "Venda") {
 			orderType = "Venda"
@@ -79,38 +73,30 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 		}
 
 		var assetType string
-		if strings.Contains(assetText, "WIN") || strings.Contains(assetText, "WDO") || strings.Contains(assetText, "IND") || strings.Contains(assetText, "DOL") {
-			assetType = "futuros"
+		if strings.Contains(assetText, "WIN") || strings.Contains(assetText, "IND") {
+			assetType = "IndiceFuturo"
+		} else if strings.Contains(assetText, "WDO") || strings.Contains(assetText, "DOL") {
+			assetType = "DolarFuturo"
 		} else {
-			assetType = "acoes"
+			assetType = "Acoes"
 		}
 
 		detailsButton, _ := (*d).FindElement(selenium.ByCSSSelector, baseSelector + " > div > div > div.container-orders-status > a")
 		if err := detailsButton.Click(); err != nil { return orders, err }
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(1500 * time.Millisecond)
 
 		elements, err := (*d).FindElements(selenium.ByCSSSelector, "#orderDetails > div > div > div > div:nth-child(7) > div.container_overflow_02.orderscol_01 > table > tbody > tr")
 		if err != nil {
-			fmt.Printf("Erro ao obter detalhes da ordem: %v", err)
+			fmt.Printf("Erro ao obter detalhes da ordem: %v\n", err)
 			return orders, err
 		}
 
-
-		// orderTypeEl, _ := (*d).FindElement(selenium.ByCSSSelector, baseSelector+"> div > h5 > span")
-		// orderType, _ := orderTypeEl.Text()
-		
-		// _, err = (*d).ExecuteScript("var s = document.querySelector('#orderDetails > div > div > div > table > tbody > tr:nth-child(2) > td:nth-child(2) > span');s.removeChild(s.lastElementChild)", nil)
-		// if err != nil {
-		// 	fmt.Printf("Erro ao executar o script para , continuando: %s", err.Error())
-		// 	// return orders, err
-		// }
 		// assetTypeEl, err := (*d).FindElement(selenium.ByCSSSelector, "#orderDetails > div > div > div > table > tbody > tr:nth-child(2) > td:nth-child(2) > span")
 		// if err != nil { return orders, err }
 		// assetType, err := assetTypeEl.Text()
 		// if err != nil { return orders, err }
 
-		fmt.Printf("Found %d order executions\n", len(elements))
 		for i := range elements {
 			e := types.Execution{}
 			baseExecSelector := fmt.Sprintf("#orderDetails > div > div > div > div:nth-child(7) > div.container_overflow_02.orderscol_01 > table > tbody > tr:nth-child(%d)", i+1)
@@ -119,13 +105,16 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 			quant, _ := infoEl.Text()
 			e.Quantity, _ = strconv.ParseInt(quant, 10, 64)
 
-			infoEl, _ = (*d).FindElement(selenium.ByCSSSelector, baseExecSelector+"> td.line_02")
-			price, _ := infoEl.Text()
-			priceFl, _ := strconv.ParseFloat(strings.ReplaceAll(strings.TrimSuffix(price, "R$ "), ",", "."), 64)
+			priceEl, err := (*d).FindElement(selenium.ByCSSSelector, baseExecSelector+"> td.line_02")
+			if err != nil { fmt.Printf("Erro ao obter o elemento de preço: %s\nPara o seletor: %s\n", err.Error(), baseExecSelector+"td.line_02")}
+			priceText, err := priceEl.Text()
+			if err != nil { fmt.Printf("Erro ao obter o texto do elemento de preço: %s\nPara o seletor: %s\n", err.Error(), baseExecSelector+"td.line_02")}
+			priceFl, err := strconv.ParseFloat(strings.ReplaceAll(strings.TrimPrefix(priceText, "R$ "), ",", "."), 64)
+			if err != nil { fmt.Printf("Erro ao converter o texto do elemento de preço em float64: %s\nPara o seletor: %s\n", err.Error(), baseExecSelector+"td.line_02")}
 			e.Price = priceFl
 
-			infoEl, _ = (*d).FindElement(selenium.ByCSSSelector, baseExecSelector+"> td.line_03")
-			date, _ := infoEl.Text()
+			dateEl, _ := (*d).FindElement(selenium.ByCSSSelector, baseExecSelector+"> td.line_03")
+			date, _ := dateEl.Text()
 			e.Datetime, _ = time.Parse("02/01/2006 15:04:05", date)
 			
 			e.Asset = asset
