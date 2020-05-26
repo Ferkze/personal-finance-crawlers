@@ -2,14 +2,16 @@ package clear
 
 import (
 	"encoding/json"
+	"time"
 
 	jap "github.com/ferkze/jsonappender"
 	"github.com/ferkze/personal-finance-crawlers/clear/types"
 )
 
-// WriteRecords escreve os registros no arquivo records.json
-func WriteRecords(exs []types.Execution) (err error) {
-	f := "records.json"
+// WriteOrdersToJSONFile escreve os registros no arquivo YYYY-MM-DD-orders.json
+func WriteOrdersToJSONFile(exs []types.Execution) (err error) {
+	now := time.Now().Format("2006-01-02")
+	f := now+"-orders.json"
 	a, err := jap.JSONAppender(f)
 	if err != nil {
 		return err
