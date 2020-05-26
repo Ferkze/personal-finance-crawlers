@@ -66,7 +66,7 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 		asset := strings.TrimSpace(strings.Split(assetText, "\n")[0])
 
 		var orderType string
-		if strings.Contains(assetText, "Venda") {
+		if strings.Contains(assetText, "Venda") || strings.Contains(assetText, "Vd") {
 			orderType = "Venda"
 		} else if strings.Contains(assetText, "Compra") {
 			orderType = "Compra"
