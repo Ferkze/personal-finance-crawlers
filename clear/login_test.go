@@ -18,7 +18,7 @@ func imAccessingTheLoginPage() error {
 
 func iFillTheLoginForm() error {
 	acc := types.Account{
-}
+	}
 	return login(&Driver, acc)
 }
 func iGetRedirectedToThePitSelection() (err error) {
@@ -27,9 +27,9 @@ func iGetRedirectedToThePitSelection() (err error) {
 func iCanAccessOrdersPage() error {
 	return navigateToOrdersPage(&Driver, "main")
 }
-func iCanFilterOrders() error {
-	start, _ := time.Parse("02/01/2006", "25/05/2020")
-	end, _ := time.Parse("02/01/2006", "25/05/2020")
+func iCanFilterOrdersFromTo(dateStart, dateEnd string) error {
+	start, _ := time.Parse("02/01/2006", dateStart)
+	end, _ := time.Parse("02/01/2006", dateEnd)
 	
 	return filterOrders(&Driver, "main", start, end, "day_trade")
 }
@@ -42,7 +42,7 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^I fill the login form$`, iFillTheLoginForm)
 	s.Step(`^I get redirected to the pit selection$`, iGetRedirectedToThePitSelection)
 	s.Step(`^I can access orders page$`, iCanAccessOrdersPage)
-	s.Step(`^I can filter orders$`, iCanFilterOrders)
+	s.Step(`^I can filter orders from "([^"]*)" to "([^"]*)"$`, iCanFilterOrdersFromTo)
 	s.Step(`^I can extract day trade orders$`, iCanExtractDayTradeOrders)
 
 	s.BeforeScenario(func(*messages.Pickle) {
