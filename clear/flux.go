@@ -92,7 +92,7 @@ func selectPit(d *selenium.WebDriver, pit string) (err error) {
 	return 
 }
 
-func navigateToOrders(d *selenium.WebDriver, pit string) (err error) {
+func navigateToOrdersPage(d *selenium.WebDriver, pit string) (err error) {
 	url := OldPitOrdersURL
 	selector := "#nav-menu > li:nth-child(2) > ul > li.Orders > a"
 	if pit == "novo" {

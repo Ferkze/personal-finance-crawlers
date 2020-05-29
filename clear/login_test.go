@@ -25,7 +25,7 @@ func iGetRedirectedToThePitSelection() (err error) {
 	return selectPit(&Driver, "main")
 }
 func iCanAccessOrdersPage() error {
-	return navigateToOrders(&Driver, "main")
+	return navigateToOrdersPage(&Driver, "main")
 }
 func iCanFilterOrders() error {
 	start, _ := time.Parse("02/01/2006", "25/05/2020")
