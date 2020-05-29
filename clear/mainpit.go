@@ -22,19 +22,27 @@ func filterMainPitOrders(d *selenium.WebDriver, start, end time.Time, operationT
 	}
 
 	_, err = (*d).ExecuteScript(fmt.Sprintf("document.querySelector('#datefilter').value = '%s'", start.Format("02/01/2006")), nil)
-	if err != nil { fmt.Printf("Error injecting script: %v\n", err) }
+	if err != nil {
+		fmt.Printf("Error injecting script: %v\n", err) 
+	}
 	_, err = (*d).ExecuteScript(fmt.Sprintf("document.querySelector('#datefilterend').value = '%s'", end.Format("02/01/2006")), nil)
-	if err != nil { fmt.Printf("Error injecting script: %v\n", err) }
+	if err != nil {
+		fmt.Printf("Error injecting script: %v\n", err) 
+	}
 
 	_, err = (*d).ExecuteScript(fmt.Sprintf("document.querySelector('#status').value = '%s'", "WithExecutions"), nil)
-	if err != nil { fmt.Printf("Error injecting script: %v\n", err) }
+	if err != nil {
+		fmt.Printf("Error injecting script: %v\n", err) 
+	}
 
 	submitButton, err := (*d).FindElement(selenium.ByID, "btnSearchForOrders")
-	if err != nil { return }
+	if err != nil {
+		return 
+	}
 
 	err = submitButton.Click()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(15 * time.Second)
 
 	return 
 }
@@ -54,15 +62,21 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 	}
 
 	ordersEls, err := (*d).FindElements(selenium.ByCSSSelector, ordersSelector)
-	if err != nil { return }
+	if err != nil {
+		return 
+	}
 
 	getExecutions := func(d *selenium.WebDriver, selector string, index int) (orders []types.Execution, err error) {
 		baseSelector := fmt.Sprintf("%s:nth-child(%d)", selector, index)
 		
 		assetEl, err := (*d).FindElement(selenium.ByCSSSelector,  baseSelector+" > div > h5")
-		if err != nil { return orders, err }
+		if err != nil {
+			return orders, err 
+		}
 		assetText, err := assetEl.Text()
-		if err != nil { return orders, err }
+		if err != nil {
+			return orders, err 
+		}
 		asset := strings.TrimSpace(strings.Split(assetText, "\n")[0])
 
 		var orderType string
@@ -92,11 +106,7 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 			return orders, err
 		}
 
-		// assetTypeEl, err := (*d).FindElement(selenium.ByCSSSelector, "#orderDetails > div > div > div > table > tbody > tr:nth-child(2) > td:nth-child(2) > span")
-		// if err != nil { return orders, err }
-		// assetType, err := assetTypeEl.Text()
-		// if err != nil { return orders, err }
-
+		// log.Printf("Extracting executions from asset %q orders", asset)
 		for i := range elements {
 			e := types.Execution{}
 			baseExecSelector := fmt.Sprintf("#orderDetails > div > div > div > div:nth-child(7) > div.container_overflow_02.orderscol_01 > table > tbody > tr:nth-child(%d)", i+1)
@@ -105,13 +115,14 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 			quant, _ := infoEl.Text()
 			e.Quantity, _ = strconv.ParseInt(quant, 10, 64)
 
-			priceEl, err := (*d).FindElement(selenium.ByCSSSelector, baseExecSelector+"> td.line_02")
-			if err != nil { fmt.Printf("Erro ao obter o elemento de preço: %s\nPara o seletor: %s\n", err.Error(), baseExecSelector+"td.line_02")}
-			priceText, err := priceEl.Text()
-			if err != nil { fmt.Printf("Erro ao obter o texto do elemento de preço: %s\nPara o seletor: %s\n", err.Error(), baseExecSelector+"td.line_02")}
-			priceFl, err := strconv.ParseFloat(strings.ReplaceAll(strings.TrimPrefix(priceText, "R$ "), ",", "."), 64)
-			if err != nil { fmt.Printf("Erro ao converter o texto do elemento de preço em float64: %s\nPara o seletor: %s\n", err.Error(), baseExecSelector+"td.line_02")}
-			e.Price = priceFl
+			priceEl, _ := (*d).FindElement(selenium.ByCSSSelector, baseExecSelector+"> td.line_02")
+			priceText, _ := priceEl.Text()
+			priceTextTransformed := strings.ReplaceAll(strings.ReplaceAll(strings.TrimPrefix(priceText, "R$ "), ",", ""), ".", "")
+			priceFl, err := strconv.ParseFloat(priceTextTransformed, 64)
+			if err != nil {
+				fmt.Printf("Erro ao converter o texto do elemento de preço em float64: %s\nPara o seletor: %s\n", err.Error(), baseExecSelector+"td.line_02")
+			}
+			e.Price = priceFl / 100
 
 			dateEl, _ := (*d).FindElement(selenium.ByCSSSelector, baseExecSelector+"> td.line_03")
 			date, _ := dateEl.Text()
@@ -122,10 +133,15 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 			e.OrderType = orderType
 
 			orders = append(orders, e)
+			// log.Printf("Extracted %d out of %d order executions", i+1, len(elements))
 		}
 
 		closeButtons, _ := (*d).FindElements(selenium.ByCSSSelector, "#orderDetails > div > div > a.bt_details_fechar")
 		for _, closeButton := range closeButtons {
+			ok, err := closeButton.IsDisplayed()
+			if err != nil || !ok {
+				continue
+			}
 			closeButton.Click()
 		}
 
@@ -138,7 +154,13 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 		if err != nil {
 			return
 		}
-		WriteRecords(executions)
+		if len(executions) == 0 {
+			return fmt.Errorf("executions not found for selector %q at index %d", ordersSelector, i)
+		}
+		err = WriteOrdersToJSONFile(executions[0].Datetime.Format("20060102")+".json", executions)
+		if err != nil {
+			return
+		}
 	}
 	return
 }
