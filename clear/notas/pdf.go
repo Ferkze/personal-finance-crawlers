@@ -43,7 +43,7 @@ func outputPdfText(inputPath string) error {
 		return err
 	}
 
-	pos := make(AssetPosition, 0)
+	pos := make(map[string]Position)
 
 	for i := 0; i < numPages; i++ {
 		pageNum := i + 1
@@ -67,11 +67,20 @@ func outputPdfText(inputPath string) error {
 		fmt.Printf("---------------------------------------Page %d:--------------------------------------------\n", pageNum)
 
 		if strings.Contains(text, "WIN ") || strings.Contains(text, "IND ") {
-			parseDayTradeOrders(pos, text)
+			pos = parseDayTradeIndexFuturesOrders(pos, text)
+		}
+		if strings.Contains(text, "WDO ") || strings.Contains(text, "DOL ") {
+			pos = parseDayTradeDolarFuturesOrders(pos, text)
+		}
+		if strings.Contains(text, "1-BOVESPA ") {
+			pos = parseDayTradeDolarFuturesOrders(pos, text)
 		}
 
+		
 		fmt.Println("------------------------------------------------------------------------------------------")
 	}
+	
+	fmt.Printf("Positions: %#v\n", pos)
 
 	return nil
 }

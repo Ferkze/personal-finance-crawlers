@@ -7,11 +7,12 @@ import (
 	"time"
 )
 
-func parseDayTradeFuturesOrders(pos AssetPosition, text string) (AssetPosition) {
+func parseDayTradeIndexFuturesOrders(positions DayTradePositions, text string) (DayTradePositions) {
 	lines = strings.Split(text, "\n")
 
-	win := &AssetPositionBalance{
-		OperationType: "day_trade",
+	pos := Position{
+		AssetType: IndFut,
+		Asset: "WIN",
 	}
 
 	for _, line := range lines {
@@ -25,7 +26,7 @@ func parseDayTradeFuturesOrders(pos AssetPosition, text string) (AssetPosition) 
 				if err != nil {
 					panic(err.Error())
 				}
-				win.Start = date
+				pos.Start = date
 			}
 		}
 		
@@ -33,7 +34,7 @@ func parseDayTradeFuturesOrders(pos AssetPosition, text string) (AssetPosition) 
 			continue
 		}
 
-		if strings.HasPrefix(texts[1], "WIN") || strings.HasPrefix(texts[1], "IND") {
+		if strings.HasPrefix(strings.ToLower(texts[1]), "win") || strings.HasPrefix(strings.ToLower(texts[1]), "ind") {
 			priceTxt := texts[5]
 			fmt.Println(texts, priceTxt)
 			price, _ := strconv.ParseFloat(strings.ReplaceAll(strings.ReplaceAll(priceTxt, ".", ""), ",", "."), 64)
@@ -48,7 +49,20 @@ func parseDayTradeFuturesOrders(pos AssetPosition, text string) (AssetPosition) 
 			total := price * float64(quant) / 5
 
 			if positionType == "C" {
-				win.Total -= total
+				pos.Total -= total
+			}
+			if positionType == "V" {
+				pos.Total += total
+			}
+		}
+	}
+
+	positions["WIN"] = pos
+
+	fmt.Println(positions)
+	
+	return positions
+}
 			}
 			if positionType == "V" {
 				win.Total += total
