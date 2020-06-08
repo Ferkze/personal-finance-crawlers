@@ -1,5 +1,6 @@
 package notas
 
+import "time"
 
 // AssetPositionBalance AssetPositionBalance
 type AssetPositionBalance struct {
@@ -8,5 +9,5 @@ type AssetPositionBalance struct {
 	OperationType string
 }
 
-// AssetPosition
-type AssetPosition map[string]AssetPositionBalance
+// AssetsPosition balanço de posições em diferentes ativos
+type AssetsPosition map[string]AssetPositionBalance
