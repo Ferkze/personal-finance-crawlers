@@ -43,9 +43,8 @@ func outputPdfText(inputPath string) error {
 		return err
 	}
 
-	fmt.Printf("--------------------\n")
-	fmt.Printf("PDF to text extraction:\n")
-	fmt.Printf("--------------------\n")
+	pos := make(AssetPosition, 0)
+
 	for i := 0; i < numPages; i++ {
 		pageNum := i + 1
 
@@ -64,17 +63,14 @@ func outputPdfText(inputPath string) error {
 			return err
 		}
 
-		lines = strings.Split(text, "\n")
+		fmt.Println("------------------------------------------------------------------------------------------")
+		fmt.Printf("---------------------------------------Page %d:--------------------------------------------\n", pageNum)
 
-		fmt.Println("------------------------------")
-		fmt.Printf("Page %d:\n", pageNum)
-		for _, line := range lines {
-			texts := strings.Split(line, " ")
-			if strings.HasPrefix(texts[0], "C") || strings.HasPrefix(texts[0], "V") {
-				fmt.Printf("\"%s\"\n", line)
-			}
+		if strings.Contains(text, "WIN ") || strings.Contains(text, "IND ") {
+			parseDayTradeOrders(pos, text)
 		}
-		fmt.Println("------------------------------")
+
+		fmt.Println("------------------------------------------------------------------------------------------")
 	}
 
 	return nil
