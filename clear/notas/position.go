@@ -29,6 +29,8 @@ type Position struct {
 	Start     time.Time
 	Type      OperationType
 	Asset     string
+	Quant     int64
+	Price     float64
 	Total     float64
 	AssetType AssetType
 }
