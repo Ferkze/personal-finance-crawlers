@@ -1,7 +1,6 @@
 package notas
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -37,7 +36,6 @@ func parseSwingTradeOrders(positions SwingTradePositions, text string) (SwingTra
 			quant, _ := strconv.ParseInt(strings.ReplaceAll(strings.ReplaceAll(quantTxt, ".", ""), ",", "."), 10, 64)
 			
 			positionType := texts[1]
-			fmt.Printf("price: %v; quant: %v\n", priceTxt, quantTxt)
 			
 			total := price * float64(quant)
 
@@ -70,8 +68,6 @@ func parseSwingTradeOrders(positions SwingTradePositions, text string) (SwingTra
 		}
 	}
 
-	fmt.Printf("%#v\n", positions)	
-	
 	return positions
 }
 
