@@ -67,13 +67,19 @@ func outputPdfText(inputPath string) error {
 		fmt.Printf("---------------------------------------Page %d:--------------------------------------------\n", pageNum)
 
 		if strings.Contains(text, "WIN ") || strings.Contains(text, "IND ") {
+			fmt.Println("Parsing Index Futures Day Trades")
 			pos = parseDayTradeIndexFuturesOrders(pos, text)
+			fmt.Printf("Index Futures Day Trades Positions: %#v\n", pos)
 		}
 		if strings.Contains(text, "WDO ") || strings.Contains(text, "DOL ") {
+			fmt.Println("Parsing Dolar Futures Day Trades")
 			pos = parseDayTradeDolarFuturesOrders(pos, text)
+			fmt.Printf("Dolar Futures Day Trades Positions: %#v\n", pos)
 		}
-		if strings.Contains(text, "1-BOVESPA ") {
-			pos = parseDayTradeDolarFuturesOrders(pos, text)
+		if strings.Contains(text, "1-BOVESPA") {
+			fmt.Println("Parsing Shares Swing Trades")
+			pos = parseSwingTradeOrders(pos, text)
+			fmt.Printf("Shares Swing Trades Positions: %#v\n", pos)
 		}
 
 		
