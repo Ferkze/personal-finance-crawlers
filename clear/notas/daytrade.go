@@ -6,9 +6,12 @@ import (
 	"time"
 )
 
-func parseDayTradeIndexFuturesOrders(positions DayTradePositions, text string) (DayTradePositions) {
+func parseDayTradeIndexFuturesOrders(results Results, positions DayTradePositions, text string) (DayTradePositions) {
 	lines = strings.Split(text, "\n")
 
+	res := Result{
+		AssetType: IndFut,
+	}
 	pos, ok := positions["WIN"]
 	if !ok {
 		pos = Position{
@@ -29,6 +32,7 @@ func parseDayTradeIndexFuturesOrders(positions DayTradePositions, text string) (
 					panic(err.Error())
 				}
 				pos.Start = date
+				res.Date = date
 			}
 		}
 		
@@ -52,19 +56,31 @@ func parseDayTradeIndexFuturesOrders(positions DayTradePositions, text string) (
 			}
 			if positionType == "V" {
 				pos.Total += total
+				res.ShortVolume += total
 			}
+			res.QuantityVolume += quant
+			res.FinancialVolume += total
 		}
 	}
 
 	positions["WIN"] = pos
+	date := res.Date.Format("2006-01-02")
+	_, ok = results[date]
+	if !ok {
+		results[date] = make([]Result, 0)
+	}
+	results[date] = append(results[date], res)
 
 	return positions
 }
 
 
-func parseDayTradeDolarFuturesOrders(positions DayTradePositions, text string) (DayTradePositions) {
+func parseDayTradeDolarFuturesOrders(results Results, positions DayTradePositions, text string) (DayTradePositions) {
 	lines = strings.Split(text, "\n")
 
+	res := Result{
+		AssetType: DolFut,
+	}
 	pos, ok := positions["WDO"]
 	if !ok {
 		pos = Position{
@@ -89,6 +105,7 @@ func parseDayTradeDolarFuturesOrders(positions DayTradePositions, text string) (
 					panic(err.Error())
 				}
 				pos.Start = date
+				res.Date = date
 			}
 		}
 
@@ -108,12 +125,20 @@ func parseDayTradeDolarFuturesOrders(positions DayTradePositions, text string) (
 			}
 			if positionType == "V" {
 				pos.Total += total
+				res.ShortVolume += total
 			}
+			res.QuantityVolume += quant
+			res.FinancialVolume += total
 		}
 	}
 
 	positions["WDO"] = pos
-
+	date := res.Date.Format("2006-01-02")
+	_, ok = results[date]
+	if !ok {
+		results[date] = make([]Result, 0)
+	}
+	results[date] = append(results[date], res)
 	
 	return positions
 }
