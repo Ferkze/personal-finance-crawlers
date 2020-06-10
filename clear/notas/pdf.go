@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ferkze/personal-finance-crawlers/clear/json"
 	"github.com/unidoc/unipdf/v3/extractor"
 	pdf "github.com/unidoc/unipdf/v3/model"
 )
@@ -14,18 +15,18 @@ var results Results
 
 // ParsePDF reads and parses orders from broker pdf
 func ParsePDF() {
-	// err := unlockPdf("../pdf/nota-de-corretagem.pdf", "../pdf/nota-de-corretagem-UNLOCKED.pdf", "485")
+	// err := unlockPdf("pdf/nota-de-corretagem.pdf", "pdf/nota-de-corretagem-UNLOCKED.pdf", "485")
 	// if err != nil {
 	// 	panic(err.Error())
 	// }
-	err := outputPdfText("../pdf/nota-de-corretagem-UNLOCKED.pdf")
+	err := parse("pdf/nota-de-corretagem-UNLOCKED.pdf")
 	if err != nil {
 		panic(err.Error())
 	}
 	return
 }
 
-func outputPdfText(inputPath string) error {
+func parse(inputPath string) error {
 	f, err := os.Open(inputPath)
 	if err != nil {
 		return err
@@ -86,6 +87,12 @@ func outputPdfText(inputPath string) error {
 	
 	fmt.Printf("Positions: %#v\n", pos)
 	fmt.Printf("Results: %#v\n", results)
+
+	err = json.WriteJSON("results.json", results)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 
 	return nil
 }
