@@ -10,6 +10,7 @@ import (
 )
 
 var lines []string
+var results Results
 
 func Test() {
 	err := unlockPdf("../nota-de-corretagem.pdf", "../nota-de-corretagem-2.pdf", "485")
@@ -44,6 +45,7 @@ func outputPdfText(inputPath string) error {
 	}
 
 	pos := make(map[string]Position)
+	results = make(Results)
 
 	for i := 0; i < numPages; i++ {
 		pageNum := i + 1
@@ -78,7 +80,7 @@ func outputPdfText(inputPath string) error {
 		}
 		if strings.Contains(text, "1-BOVESPA") {
 			fmt.Println("Parsing Shares Swing Trades")
-			pos = parseSwingTradeOrders(pos, text)
+			parseSharesOrders(results, pos, text)
 			fmt.Printf("Shares Swing Trades Positions: %#v\n", pos)
 		}
 
@@ -87,6 +89,7 @@ func outputPdfText(inputPath string) error {
 	}
 	
 	fmt.Printf("Positions: %#v\n", pos)
+	fmt.Printf("Results: %#v\n", results)
 
 	return nil
 }
