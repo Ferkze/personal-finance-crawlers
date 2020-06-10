@@ -94,6 +94,12 @@ func parse(inputPath string) error {
 		return err
 	}
 
+	err = json.WriteJSON("positions.json", pos)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
 	return nil
 }
 
