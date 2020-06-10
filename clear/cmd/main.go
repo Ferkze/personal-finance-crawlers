@@ -7,5 +7,5 @@ import (
 
 func main() {
 	// clear.Main()
-	notas.Test()
+	notas.ParsePDF()
 }

@@ -12,16 +12,15 @@ import (
 var lines []string
 var results Results
 
-func Test() {
-	err := unlockPdf("../nota-de-corretagem.pdf", "../nota-de-corretagem-2.pdf", "485")
+// ParsePDF reads and parses orders from broker pdf
+func ParsePDF() {
+	// err := unlockPdf("../pdf/nota-de-corretagem.pdf", "../pdf/nota-de-corretagem-UNLOCKED.pdf", "485")
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+	err := outputPdfText("../pdf/nota-de-corretagem-UNLOCKED.pdf")
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
-	err = outputPdfText("../nota-de-corretagem-2.pdf")
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+		panic(err.Error())
 	}
 	return
 }
@@ -65,17 +64,16 @@ func outputPdfText(inputPath string) error {
 			return err
 		}
 
-		fmt.Println("------------------------------------------------------------------------------------------")
-		fmt.Printf("---------------------------------------Page %d:--------------------------------------------\n", pageNum)
+		fmt.Printf("-----------------Page %d:-----------------\n", pageNum)
 
 		if strings.Contains(text, "WIN ") || strings.Contains(text, "IND ") {
 			fmt.Println("Parsing Index Futures Day Trades")
-			pos = parseDayTradeIndexFuturesOrders(pos, text)
+			parseDayTradeIndexFuturesOrders(results, pos, text)
 			fmt.Printf("Index Futures Day Trades Positions: %#v\n", pos)
 		}
 		if strings.Contains(text, "WDO ") || strings.Contains(text, "DOL ") {
 			fmt.Println("Parsing Dolar Futures Day Trades")
-			pos = parseDayTradeDolarFuturesOrders(pos, text)
+			parseDayTradeDolarFuturesOrders(results, pos, text)
 			fmt.Printf("Dolar Futures Day Trades Positions: %#v\n", pos)
 		}
 		if strings.Contains(text, "1-BOVESPA") {
@@ -83,9 +81,7 @@ func outputPdfText(inputPath string) error {
 			parseSharesOrders(results, pos, text)
 			fmt.Printf("Shares Swing Trades Positions: %#v\n", pos)
 		}
-
 		
-		fmt.Println("------------------------------------------------------------------------------------------")
 	}
 	
 	fmt.Printf("Positions: %#v\n", pos)
