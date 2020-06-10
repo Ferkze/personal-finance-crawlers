@@ -3,7 +3,6 @@ package notas
 import (
 	"strconv"
 	"strings"
-	"time"
 )
 
 func parseDayTradeIndexFuturesOrders(results Results, positions DayTradePositions, text string) (DayTradePositions) {
@@ -19,22 +18,16 @@ func parseDayTradeIndexFuturesOrders(results Results, positions DayTradePosition
 			Asset: "WIN",
 		}
 	}
+	
+	date, err := parsePageDate(text)
+	if err != nil {
+		panic(err.Error())
+	}
+	res.Date = date
+	pos.Start = date
 
 	for _, line := range lines {
 		texts := strings.Split(line, " ")
-
-		if len(texts) == 3 {
-			dateTxt := texts[2]
-
-			if strings.Contains(dateTxt, "/") {
-				date, err := time.Parse("02/01/2006", dateTxt)
-				if err != nil {
-					panic(err.Error())
-				}
-				pos.Start = date
-				res.Date = date
-			}
-		}
 		
 		if len(texts) < 2 {
 			continue
@@ -53,9 +46,11 @@ func parseDayTradeIndexFuturesOrders(results Results, positions DayTradePosition
 
 			if positionType == "C" {
 				pos.Total -= total
+				res.Value -= total
 			}
 			if positionType == "V" {
 				pos.Total += total
+				res.Value += total
 				res.ShortVolume += total
 			}
 			res.QuantityVolume += quant
@@ -63,13 +58,8 @@ func parseDayTradeIndexFuturesOrders(results Results, positions DayTradePosition
 		}
 	}
 
-	positions["WIN"] = pos
-	date := res.Date.Format("2006-01-02")
-	_, ok = results[date]
-	if !ok {
-		results[date] = make([]Result, 0)
-	}
-	results[date] = append(results[date], res)
+	results = appendResult(results, res)
+	positions = appendPosition(positions, pos)
 
 	return positions
 }
@@ -93,6 +83,8 @@ func parseDayTradeDolarFuturesOrders(results Results, positions DayTradePosition
 	if err != nil {
 		panic(err.Error())
 	}
+	res.Date = date
+	pos.Start = date
 
 	for _, line := range lines {
 		texts := strings.Split(line, " ")
@@ -114,25 +106,35 @@ func parseDayTradeDolarFuturesOrders(results Results, positions DayTradePosition
 
 			if positionType == "C" {
 				pos.Total -= total
+				res.Value -= total
 			}
 			if positionType == "V" {
 				pos.Total += total
+				res.Value += total
 				res.ShortVolume += total
 			}
 			res.QuantityVolume += quant
 			res.FinancialVolume += total
-			res.Date = date
-			pos.Start = date
 		}
 	}
 
-	positions["WDO"] = pos
-	formatted := date.Format("2006-01-02")
-	_, ok = results[formatted]
-	if !ok {
-		results[formatted] = make([]Result, 0)
-	}
-	results[formatted] = append(results[formatted], res)
+	results = appendResult(results, res)
+	positions = appendPosition(positions, pos)
 	
+	return positions
+}
+
+func appendResult(results Results, res Result) Results {
+	date := res.Date.Format("2006-01-02")
+	_, ok := results[date]
+	if !ok {
+		results[date] = make([]Result, 0)
+	}
+	results[date] = append(results[date], res)
+	return results
+}
+
+func appendPosition(positions map[string]Position, pos Position) map[string]Position {
+	positions[pos.Asset] = pos
 	return positions
 }
