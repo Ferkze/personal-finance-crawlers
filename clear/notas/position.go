@@ -52,18 +52,4 @@ type Result struct {
 }
 
 // Results all results of closed trades
-type Results map[string]Result
-
-// Total calcula o preço * quantidade
-// func (pos *Position) Total() float64 {
-// 	switch pos.AssetType {
-// 	case "Shares":
-// 		return pos.Price * float64(pos.Quant)
-// 	case "IndFut":
-// 		return pos.Price * float64(pos.Quant) / 5
-// 	case "DolFut":
-// 		return pos.Price * float64(pos.Quant) * 10
-// 	default:
-// 		return 0
-// 	}
-// }
+type Results map[string][]Result
