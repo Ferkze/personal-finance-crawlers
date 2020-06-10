@@ -16,6 +16,7 @@ func parseSharesOrders(results Results, positions SwingTradePositions, text stri
 	if err != nil {
 		panic(err.Error())
 	}
+	res.Date = date
 
 	for _, line := range lines {
 		texts := strings.Split(line, " ")
@@ -27,8 +28,11 @@ func parseSharesOrders(results Results, positions SwingTradePositions, text stri
 		if strings.HasPrefix(strings.ToLower(texts[0]), "1-bovespa"){
 			asset := strings.TrimSpace(strings.Join(texts[3:5], " "))
 			
-			pos  := Position{
-				Asset: asset,
+			pos, ok := positions[asset]
+			if !ok {
+				pos = Position{
+					Asset: asset,
+				}
 			}
 
 			priceTxt := texts[len(texts)-3]
@@ -42,12 +46,18 @@ func parseSharesOrders(results Results, positions SwingTradePositions, text stri
 			total := price * float64(quant)
 
 			if positionType == "C" {
+				if pos.Quant < 0 {
+					res.Value += calculateResult(pos.Price, price, quant)
+				}
 				pos.Price = calculateAvgPrice(pos.Price, price, pos.Quant, quant)
 				pos.Quant += quant
 				
 				pos.Total -= total // A buy takes from total
 			}
 			if positionType == "V" {
+				if pos.Quant > 0 {
+					res.Value += calculateResult(pos.Price, price, quant)
+				}
 				pos.Price = calculateAvgPrice(pos.Price, price, pos.Quant, -quant)
 				pos.Quant -= quant
 
@@ -56,24 +66,22 @@ func parseSharesOrders(results Results, positions SwingTradePositions, text stri
 			}
 			res.QuantityVolume += quant
 			res.FinancialVolume += total
-			res.Date = date
 			pos.Start = date
 			
 			positions[asset] = pos
 		}
 	}
 
-	formatted := date.Format("2006-01-02")
-	_, ok := results[formatted]
-	if !ok {
-		results[formatted] = make([]Result, 0)
-	}
-	results[formatted] = append(results[formatted], res)
+	results = appendResult(results, res)
 
 	return positions
 }
 
 func calculateAvgPrice(p1, p2 float64, q1, q2 int64)  float64 {
+	if q1 - q2 == 0 {
+		return 0
+	}
+	
 	qf1 := float64(q1)
 	qf2 := float64(q2)
 	
@@ -81,4 +89,8 @@ func calculateAvgPrice(p1, p2 float64, q1, q2 int64)  float64 {
 	a2 := p2 * qf2
 
 	return (a1 + a2)/ (qf1 + qf2)
+}
+
+func calculateResult(p1, p2 float64, q int64) float64 {
+	return (p2 * float64(q)) - (p1 * float64(q))
 }
