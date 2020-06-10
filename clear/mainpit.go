@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ferkze/personal-finance-crawlers/clear/json"
 	"github.com/ferkze/personal-finance-crawlers/clear/support"
 	"github.com/ferkze/personal-finance-crawlers/clear/types"
 	"github.com/tebeka/selenium"
@@ -157,7 +158,7 @@ func parseMainPitOrders(d *selenium.WebDriver, operationType string) (err error)
 		if len(executions) == 0 {
 			return fmt.Errorf("executions not found for selector %q at index %d", ordersSelector, i)
 		}
-		err = WriteOrdersToJSONFile(executions[0].Datetime.Format("20060102")+".json", executions)
+		err = json.AppendArrayJSON(executions[0].Datetime.Format("20060102")+".json", executions)
 		if err != nil {
 			return
 		}
