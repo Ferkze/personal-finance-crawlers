@@ -1,10 +1,8 @@
 package notas
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func parseSharesOrders(results Results, positions SwingTradePositions, text string) (SwingTradePositions) {
@@ -14,7 +12,10 @@ func parseSharesOrders(results Results, positions SwingTradePositions, text stri
 		AssetType: Shares,
 	}
 	
-	var date time.Time
+	date, err := parsePageDate(text)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	for _, line := range lines {
 		texts := strings.Split(line, " ")
@@ -23,28 +24,12 @@ func parseSharesOrders(results Results, positions SwingTradePositions, text stri
 			continue
 		}
 
-
-
-		fmt.Println(texts)
-		if len(texts) == 3 {
-			dateTxt := texts[2]
-			
-			if strings.Contains(dateTxt, "/") {
-				date, err := time.Parse("02/01/2006", dateTxt)
-				if err != nil {
-					panic(err.Error())
-				}
-				res.Date = date
-			}
-		}
-
 		if strings.HasPrefix(strings.ToLower(texts[0]), "1-bovespa"){
 			asset := strings.TrimSpace(strings.Join(texts[3:5], " "))
 			
 			pos  := Position{
 				Asset: asset,
 			}
-			
 
 			priceTxt := texts[len(texts)-3]
 			price, _ := strconv.ParseFloat(strings.ReplaceAll(strings.ReplaceAll(priceTxt, ".", ""), ",", "."), 64)
@@ -71,17 +56,19 @@ func parseSharesOrders(results Results, positions SwingTradePositions, text stri
 			}
 			res.QuantityVolume += quant
 			res.FinancialVolume += total
-
+			res.Date = date
+			pos.Start = date
+			
 			positions[asset] = pos
 		}
 	}
 
-	date := res.Date.Format("2006-01-02")
-	_, ok := results[date]
+	formatted := date.Format("2006-01-02")
+	_, ok := results[formatted]
 	if !ok {
-		results[date] = make([]Result, 0)
+		results[formatted] = make([]Result, 0)
 	}
-	results[date] = append(results[date], res)
+	results[formatted] = append(results[formatted], res)
 
 	return positions
 }

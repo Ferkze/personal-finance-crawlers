@@ -88,25 +88,17 @@ func parseDayTradeDolarFuturesOrders(results Results, positions DayTradePosition
 			Asset: "WDO",
 		}
 	}
+	
+	date, err := parsePageDate(text)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	for _, line := range lines {
 		texts := strings.Split(line, " ")
 		
 		if len(texts) < 2 {
 			continue
-		}
-
-		if len(texts) == 3 {
-			dateTxt := texts[2]
-
-			if strings.Contains(dateTxt, "/") {
-				date, err := time.Parse("02/01/2006", dateTxt)
-				if err != nil {
-					panic(err.Error())
-				}
-				pos.Start = date
-				res.Date = date
-			}
 		}
 
 		if strings.HasPrefix(strings.ToLower(texts[1]), "wdo") || strings.HasPrefix(strings.ToLower(texts[1]), "dol") {
@@ -129,16 +121,18 @@ func parseDayTradeDolarFuturesOrders(results Results, positions DayTradePosition
 			}
 			res.QuantityVolume += quant
 			res.FinancialVolume += total
+			res.Date = date
+			pos.Start = date
 		}
 	}
 
 	positions["WDO"] = pos
-	date := res.Date.Format("2006-01-02")
-	_, ok = results[date]
+	formatted := date.Format("2006-01-02")
+	_, ok = results[formatted]
 	if !ok {
-		results[date] = make([]Result, 0)
+		results[formatted] = make([]Result, 0)
 	}
-	results[date] = append(results[date], res)
+	results[formatted] = append(results[formatted], res)
 	
 	return positions
 }
