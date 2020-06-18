@@ -1,11 +1,13 @@
 package notas
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
-func parseDayTradeIndexFuturesOrders(results Results, positions DayTradePositions, text string) (DayTradePositions) {
+func extractDayTradeIndexFuturesOrders(results Results, positions DayTradePositions, text string) (DayTradePositions) {
 	lines = strings.Split(text, "\n")
 
 	res := Result{
@@ -19,7 +21,7 @@ func parseDayTradeIndexFuturesOrders(results Results, positions DayTradePosition
 		}
 	}
 	
-	date, err := parsePageDate(text)
+	date, err := extractPageDate(text)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -64,8 +66,7 @@ func parseDayTradeIndexFuturesOrders(results Results, positions DayTradePosition
 	return positions
 }
 
-
-func parseDayTradeDolarFuturesOrders(results Results, positions DayTradePositions, text string) (DayTradePositions) {
+func extractDayTradeDolarFuturesOrders(results Results, positions DayTradePositions, text string) (DayTradePositions) {
 	lines = strings.Split(text, "\n")
 
 	res := Result{
@@ -79,7 +80,7 @@ func parseDayTradeDolarFuturesOrders(results Results, positions DayTradePosition
 		}
 	}
 	
-	date, err := parsePageDate(text)
+	date, err := extractPageDate(text)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -124,17 +125,91 @@ func parseDayTradeDolarFuturesOrders(results Results, positions DayTradePosition
 	return positions
 }
 
-func appendResult(results Results, res Result) Results {
-	date := res.Date.Format("2006-01-02")
-	_, ok := results[date]
-	if !ok {
-		results[date] = make([]Result, 0)
+func extractSharesOrders(results Results, positions SwingTradePositions, text string) (SwingTradePositions) {
+	lines = strings.Split(text, "\n")
+
+	res := Result{
+		AssetType: Shares,
 	}
-	results[date] = append(results[date], res)
-	return results
+	
+	date, err := extractPageDate(text)
+	if err != nil {
+		panic(err.Error())
+	}
+	res.Date = date
+
+	for _, line := range lines {
+		texts := strings.Split(line, " ")
+		
+		if len(texts) < 2 {
+			continue
+		}
+
+		if strings.HasPrefix(strings.ToLower(texts[0]), "1-bovespa"){
+			asset := strings.TrimSpace(strings.Join(texts[3:5], " "))
+			
+			pos, ok := positions[asset]
+			if !ok {
+				pos = Position{
+					Asset: asset,
+				}
+			}
+
+			priceTxt := texts[len(texts)-3]
+			price, _ := strconv.ParseFloat(strings.ReplaceAll(strings.ReplaceAll(priceTxt, ".", ""), ",", "."), 64)
+			
+			quantTxt := texts[len(texts)-4]
+			quant, _ := strconv.ParseInt(strings.ReplaceAll(strings.ReplaceAll(quantTxt, ".", ""), ",", "."), 10, 64)
+			
+			positionType := texts[1]
+			
+			total := price * float64(quant)
+
+			if positionType == "C" {
+				if pos.Quant < 0 {
+					res.Value += calculateResult(pos.Price, price, quant)
+				}
+				pos.Price = calculateAvgPrice(pos.Price, price, pos.Quant, quant)
+				pos.Quant += quant
+				
+				pos.Total -= total // A buy takes from total
+			}
+			if positionType == "V" {
+				if pos.Quant > 0 {
+					res.Value += calculateResult(pos.Price, price, quant)
+				}
+				pos.Price = calculateAvgPrice(pos.Price, price, pos.Quant, -quant)
+				pos.Quant -= quant
+
+				pos.Total += total // A sell adds to total
+				res.ShortVolume += total
+			}
+			res.QuantityVolume += quant
+			res.FinancialVolume += total
+			pos.Start = date
+			
+			positions[asset] = pos
+		}
+	}
+
+	results = appendResult(results, res)
+
+	return positions
 }
 
-func appendPosition(positions map[string]Position, pos Position) map[string]Position {
-	positions[pos.Asset] = pos
-	return positions
+func extractPageDate(pageText string) (date time.Time, err error) {
+	lines = strings.Split(pageText, "\n")
+
+	for _, line := range lines {
+		texts := strings.Split(line, " ")
+		if len(texts) == 3 {
+			dateTxt := texts[2]
+			if strings.Contains(dateTxt, "/") {
+				return time.Parse("02/01/2006", dateTxt)
+			}
+		}
+	}
+	fmt.Println("(parsePageDate) Could not find date in expected form")
+
+	return
 }

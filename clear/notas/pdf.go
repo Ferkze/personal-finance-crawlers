@@ -45,6 +45,7 @@ func parse(inputPath string) error {
 	}
 
 	pos := make(map[string]Position)
+	// swings := make(SwingTradePositions)
 	results = make(Results)
 
 	for i := 0; i < numPages; i++ {
@@ -69,24 +70,24 @@ func parse(inputPath string) error {
 
 		if strings.Contains(text, "WIN ") || strings.Contains(text, "IND ") {
 			fmt.Println("Parsing Index Futures Day Trades")
-			parseDayTradeIndexFuturesOrders(results, pos, text)
-			fmt.Printf("Index Futures Day Trades Positions: %#v\n", pos)
+			extractDayTradeIndexFuturesOrders(results, pos, text)
+			// fmt.Printf("Index Futures Day Trades Positions: %#v\n", pos)
 		}
 		if strings.Contains(text, "WDO ") || strings.Contains(text, "DOL ") {
 			fmt.Println("Parsing Dolar Futures Day Trades")
-			parseDayTradeDolarFuturesOrders(results, pos, text)
-			fmt.Printf("Dolar Futures Day Trades Positions: %#v\n", pos)
+			extractDayTradeDolarFuturesOrders(results, pos, text)
+			// fmt.Printf("Dolar Futures Day Trades Positions: %#v\n", pos)
 		}
 		if strings.Contains(text, "1-BOVESPA") {
 			fmt.Println("Parsing Shares Swing Trades")
-			parseSharesOrders(results, pos, text)
-			fmt.Printf("Shares Swing Trades Positions: %#v\n", pos)
+			extractSharesOrders(results, pos, text)
+			// fmt.Printf("Shares Swing Trades Positions: %#v\n", pos)
 		}
 		
 	}
 	
-	fmt.Printf("Positions: %#v\n", pos)
-	fmt.Printf("Results: %#v\n", results)
+	printPositions(pos)
+	printResults(results)
 
 	err = json.WriteJSON("results.json", results)
 	if err != nil {
