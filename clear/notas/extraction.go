@@ -7,12 +7,26 @@ import (
 	"time"
 )
 
-func extractDayTradeIndexFuturesOrders(results Results, positions DayTradePositions, text string) (DayTradePositions) {
+func extract(text string, pos map[string]Position) {
+	if strings.Contains(text, "WIN ") || strings.Contains(text, "IND ") {
+		fmt.Println("Parsing Index Futures Day Trades")
+		extractDayTradeIndexFuturesOrders(pos, text)
+	}
+	if strings.Contains(text, "WDO ") || strings.Contains(text, "DOL ") {
+		fmt.Println("Parsing Dolar Futures Day Trades")
+		extractDayTradeDolarFuturesOrders(pos, text)
+	}
+	if strings.Contains(text, "1-BOVESPA") {
+		fmt.Println("Parsing Shares Swing Trades")
+		extractSharesOrders(pos, text)
+	}
+	
+	printPositions(pos)
+}
+
+func extractDayTradeIndexFuturesOrders(positions DayTradePositions, text string) (DayTradePositions) {
 	lines = strings.Split(text, "\n")
 
-	res := Result{
-		AssetType: IndFut,
-	}
 	pos, ok := positions["WIN"]
 	if !ok {
 		pos = Position{
@@ -25,7 +39,6 @@ func extractDayTradeIndexFuturesOrders(results Results, positions DayTradePositi
 	if err != nil {
 		panic(err.Error())
 	}
-	res.Date = date
 	pos.Start = date
 
 	for _, line := range lines {
@@ -48,30 +61,26 @@ func extractDayTradeIndexFuturesOrders(results Results, positions DayTradePositi
 
 			if positionType == "C" {
 				pos.Total -= total
-				res.Value -= total
+				pos.Value -= total
 			}
 			if positionType == "V" {
 				pos.Total += total
-				res.Value += total
-				res.ShortVolume += total
+				pos.Value += total
+				pos.ShortVolume += total
 			}
-			res.QuantityVolume += quant
-			res.FinancialVolume += total
+			pos.QuantityVolume += quant
+			pos.FinancialVolume += total
 		}
 	}
 
-	results = appendResult(results, res)
 	positions = appendPosition(positions, pos)
 
 	return positions
 }
 
-func extractDayTradeDolarFuturesOrders(results Results, positions DayTradePositions, text string) (DayTradePositions) {
+func extractDayTradeDolarFuturesOrders(positions DayTradePositions, text string) (DayTradePositions) {
 	lines = strings.Split(text, "\n")
 
-	res := Result{
-		AssetType: DolFut,
-	}
 	pos, ok := positions["WDO"]
 	if !ok {
 		pos = Position{
@@ -84,7 +93,6 @@ func extractDayTradeDolarFuturesOrders(results Results, positions DayTradePositi
 	if err != nil {
 		panic(err.Error())
 	}
-	res.Date = date
 	pos.Start = date
 
 	for _, line := range lines {
@@ -107,36 +115,30 @@ func extractDayTradeDolarFuturesOrders(results Results, positions DayTradePositi
 
 			if positionType == "C" {
 				pos.Total -= total
-				res.Value -= total
+				pos.Value -= total
 			}
 			if positionType == "V" {
 				pos.Total += total
-				res.Value += total
-				res.ShortVolume += total
+				pos.Value += total
+				pos.ShortVolume += total
 			}
-			res.QuantityVolume += quant
-			res.FinancialVolume += total
+			pos.QuantityVolume += quant
+			pos.FinancialVolume += total
 		}
 	}
 
-	results = appendResult(results, res)
 	positions = appendPosition(positions, pos)
 	
 	return positions
 }
 
-func extractSharesOrders(results Results, positions SwingTradePositions, text string) (SwingTradePositions) {
+func extractSharesOrders(positions DayTradePositions, text string) (DayTradePositions) {
 	lines = strings.Split(text, "\n")
 
-	res := Result{
-		AssetType: Shares,
-	}
-	
 	date, err := extractPageDate(text)
 	if err != nil {
 		panic(err.Error())
 	}
-	res.Date = date
 
 	for _, line := range lines {
 		texts := strings.Split(line, " ")
@@ -167,7 +169,7 @@ func extractSharesOrders(results Results, positions SwingTradePositions, text st
 
 			if positionType == "C" {
 				if pos.Quant < 0 {
-					res.Value += calculateResult(pos.Price, price, quant)
+					pos.Value += calculateResult(pos.Price, price, quant)
 				}
 				pos.Price = calculateAvgPrice(pos.Price, price, pos.Quant, quant)
 				pos.Quant += quant
@@ -176,23 +178,21 @@ func extractSharesOrders(results Results, positions SwingTradePositions, text st
 			}
 			if positionType == "V" {
 				if pos.Quant > 0 {
-					res.Value += calculateResult(pos.Price, price, quant)
+					pos.Value += calculateResult(pos.Price, price, quant)
 				}
 				pos.Price = calculateAvgPrice(pos.Price, price, pos.Quant, -quant)
 				pos.Quant -= quant
 
 				pos.Total += total // A sell adds to total
-				res.ShortVolume += total
+				pos.ShortVolume += total
 			}
-			res.QuantityVolume += quant
-			res.FinancialVolume += total
+			pos.QuantityVolume += quant
+			pos.FinancialVolume += total
 			pos.Start = date
 			
 			positions[asset] = pos
 		}
 	}
-
-	results = appendResult(results, res)
 
 	return positions
 }

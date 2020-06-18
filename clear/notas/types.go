@@ -12,7 +12,6 @@ type AssetPositionBalance struct {
 // AssetsPosition balanço de posições em diferentes ativos
 type AssetsPosition map[string]AssetPositionBalance
 
-
 // AssetType tipo de ativo
 type AssetType string
 
@@ -37,13 +36,17 @@ const (
 
 // Position Position
 type Position struct {
-	Start     time.Time
-	Type      OperationType
-	Asset     string
-	Quant     int64
-	Price     float64
-	Total     float64
-	AssetType AssetType
+	Start           time.Time
+	Type            OperationType
+	Asset           string
+	Quant           int64
+	Price           float64
+	Total           float64
+	AssetType       AssetType
+	Value           float64
+	ShortVolume     float64
+	QuantityVolume  int64
+	FinancialVolume float64
 }
 
 // DayTradePositions Positions
@@ -63,4 +66,11 @@ type Result struct {
 }
 
 // Results all results of closed trades
-type Results map[string][]Result
+type Results map[string]DailyResult
+
+// DailyResult report diário de resultado
+type DailyResult struct {
+	SwingTradeShares Result
+	DayTradeShares   Result
+	DayTradeFutures  Result
+}

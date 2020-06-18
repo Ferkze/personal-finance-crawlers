@@ -20,15 +20,15 @@ func calculateResult(p1, p2 float64, q int64) float64 {
 	return (p2 * float64(q)) - (p1 * float64(q))
 }
 
-func appendResult(results Results, res Result) Results {
-	date := res.Date.Format("2006-01-02")
-	_, ok := results[date]
-	if !ok {
-		results[date] = make([]Result, 0)
-	}
-	results[date] = append(results[date], res)
-	return results
-}
+// func appendResult(results Results, res Result) Results {
+// 	date := res.Date.Format("2006-01-02")
+// 	_, ok := results[date]
+// 	if !ok {
+// 		results[date] = make([]Result, 0)
+// 	}
+// 	results[date] = append(results[date], res)
+// 	return results
+// }
 
 func appendPosition(positions map[string]Position, pos Position) map[string]Position {
 	positions[pos.Asset] = pos
@@ -53,8 +53,8 @@ func printResults(data Results) {
 	fmt.Println("Printing results")
 	for k, v := range data {
 		fmt.Printf("-->[ %s ]<--\n", k)
-		for _, r := range v {
-			fmt.Printf("[%s]: %v\n", r.AssetType, r.Value)
-		}
+		fmt.Printf("[%s]: %v\n", v.SwingTradeShares.AssetType, v.SwingTradeShares.Value)
+		fmt.Printf("[%s]: %v\n", v.DayTradeShares.AssetType, v.DayTradeShares.Value)
+		fmt.Printf("[%s]: %v\n", v.DayTradeFutures.AssetType, v.DayTradeFutures.Value)
 	}
 }

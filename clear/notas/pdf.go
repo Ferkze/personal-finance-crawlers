@@ -3,9 +3,7 @@ package notas
 import (
 	"fmt"
 	"os"
-	"strings"
 
-	"github.com/ferkze/personal-finance-crawlers/clear/json"
 	"github.com/unidoc/unipdf/v3/extractor"
 	pdf "github.com/unidoc/unipdf/v3/model"
 )
@@ -43,8 +41,8 @@ func parse(inputPath string) error {
 	if err != nil {
 		return err
 	}
+	positions := make(map[string]Position)
 
-	pos := make(map[string]Position)
 	// swings := make(SwingTradePositions)
 	results = make(Results)
 
@@ -65,41 +63,24 @@ func parse(inputPath string) error {
 		if err != nil {
 			return err
 		}
+		fmt.Printf("Extracting page %d...\n", pageNum)
 
-		fmt.Printf("-----------------Page %d:-----------------\n", pageNum)
-
-		if strings.Contains(text, "WIN ") || strings.Contains(text, "IND ") {
-			fmt.Println("Parsing Index Futures Day Trades")
-			extractDayTradeIndexFuturesOrders(results, pos, text)
-			// fmt.Printf("Index Futures Day Trades Positions: %#v\n", pos)
-		}
-		if strings.Contains(text, "WDO ") || strings.Contains(text, "DOL ") {
-			fmt.Println("Parsing Dolar Futures Day Trades")
-			extractDayTradeDolarFuturesOrders(results, pos, text)
-			// fmt.Printf("Dolar Futures Day Trades Positions: %#v\n", pos)
-		}
-		if strings.Contains(text, "1-BOVESPA") {
-			fmt.Println("Parsing Shares Swing Trades")
-			extractSharesOrders(results, pos, text)
-			// fmt.Printf("Shares Swing Trades Positions: %#v\n", pos)
-		}
-		
+		extract(text, positions)
 	}
 	
-	printPositions(pos)
 	printResults(results)
 
-	err = json.WriteJSON("results.json", results)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
+	// err = json.WriteJSON("results.json", results)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return err
+	// }
 
-	err = json.WriteJSON("positions.json", pos)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
+	// err = json.WriteJSON("positions.json", positions)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return err
+	// }
 
 	return nil
 }
