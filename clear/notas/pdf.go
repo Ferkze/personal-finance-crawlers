@@ -3,6 +3,7 @@ package notas
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/unidoc/unipdf/v3/extractor"
 	pdf "github.com/unidoc/unipdf/v3/model"
@@ -13,11 +14,12 @@ var results Results
 
 // ParsePDF reads and parses orders from broker pdf
 func ParsePDF() {
-	// err := unlockPdf("pdf/nota-de-corretagem.pdf", "pdf/nota-de-corretagem-UNLOCKED.pdf", "485")
+	var err error
+	// err = unlockPdf("pdf/300450_NotaCorretagem.pdf", "pdf/nota-de-corretagem-maio-2020-UNLOCKED.pdf", "485")
 	// if err != nil {
 	// 	panic(err.Error())
 	// }
-	err := parse("pdf/nota-de-corretagem-UNLOCKED.pdf")
+	err = parse("pdf/nota-de-corretagem-maio-2020-UNLOCKED.pdf")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -41,7 +43,8 @@ func parse(inputPath string) error {
 	if err != nil {
 		return err
 	}
-	positions := make(map[string]Position)
+	positions := make(DayTradePositions)
+	swings := make(SwingTradePositions)
 
 	// swings := make(SwingTradePositions)
 	results = make(Results)
@@ -66,6 +69,10 @@ func parse(inputPath string) error {
 		fmt.Printf("Extracting page %d...\n", pageNum)
 
 		extract(text, positions)
+
+		if !strings.Contains(text, "CONTINUA...") {
+			updatePositions(positions, swings)
+		}
 	}
 	
 	printResults(results)

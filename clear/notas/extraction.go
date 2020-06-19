@@ -2,6 +2,7 @@ package notas
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -57,15 +58,16 @@ func extractDayTradeIndexFuturesOrders(positions DayTradePositions, text string)
 
 			positionType := texts[0]
 			
-			total := price * float64(quant) / 5
+			total := math.Round(price * float64(quant) * 100 / 5) / 100
+
 
 			if positionType == "C" {
 				pos.Total -= total
-				pos.Value -= total
+				pos.Result -= total
 			}
 			if positionType == "V" {
 				pos.Total += total
-				pos.Value += total
+				pos.Result += total
 				pos.ShortVolume += total
 			}
 			pos.QuantityVolume += quant
@@ -111,15 +113,15 @@ func extractDayTradeDolarFuturesOrders(positions DayTradePositions, text string)
 
 			positionType := texts[0]
 			
-			total := price * float64(quant) * 10
+			total := math.Round(price * float64(quant) * 1000) / 100
 
 			if positionType == "C" {
 				pos.Total -= total
-				pos.Value -= total
+				pos.Result -= total
 			}
 			if positionType == "V" {
 				pos.Total += total
-				pos.Value += total
+				pos.Result += total
 				pos.ShortVolume += total
 			}
 			pos.QuantityVolume += quant
@@ -158,18 +160,28 @@ func extractSharesOrders(positions DayTradePositions, text string) (DayTradePosi
 			}
 
 			priceTxt := texts[len(texts)-3]
-			price, _ := strconv.ParseFloat(strings.ReplaceAll(strings.ReplaceAll(priceTxt, ".", ""), ",", "."), 64)
+			price, err := strconv.ParseFloat(strings.ReplaceAll(strings.ReplaceAll(priceTxt, ".", ""), ",", "."), 64)
+			if err != nil {
+				fmt.Printf("Error parsing priceTxt ['texts[len(texts)-3]']: %s", priceTxt)
+				fmt.Printf("Line error: %v", texts)
+				panic(err.Error())
+			}
 			
 			quantTxt := texts[len(texts)-4]
-			quant, _ := strconv.ParseInt(strings.ReplaceAll(strings.ReplaceAll(quantTxt, ".", ""), ",", "."), 10, 64)
+			quant, err := strconv.ParseInt(strings.ReplaceAll(strings.ReplaceAll(quantTxt, ".", ""), ",", "."), 10, 64)
+			if err != nil {
+				fmt.Printf("Error parsing quantTxt ['texts[len(texts)-4]']: %s", quantTxt)
+				fmt.Printf("Line error: %v", texts)
+				panic(err.Error())
+			}
 			
 			positionType := texts[1]
 			
-			total := price * float64(quant)
+			total := math.Round(price * float64(quant) * 100) / 100
 
 			if positionType == "C" {
 				if pos.Quant < 0 {
-					pos.Value += calculateResult(pos.Price, price, quant)
+					pos.Result += calculateResult(pos.Price, price, quant)
 				}
 				pos.Price = calculateAvgPrice(pos.Price, price, pos.Quant, quant)
 				pos.Quant += quant
@@ -178,7 +190,7 @@ func extractSharesOrders(positions DayTradePositions, text string) (DayTradePosi
 			}
 			if positionType == "V" {
 				if pos.Quant > 0 {
-					pos.Value += calculateResult(pos.Price, price, quant)
+					pos.Result += calculateResult(pos.Price, price, quant)
 				}
 				pos.Price = calculateAvgPrice(pos.Price, price, pos.Quant, -quant)
 				pos.Quant -= quant
