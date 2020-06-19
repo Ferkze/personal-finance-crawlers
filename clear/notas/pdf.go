@@ -72,6 +72,8 @@ func parse(inputPath string) error {
 
 		if !strings.Contains(text, "CONTINUA...") {
 			updatePositions(positions, swings)
+		} else {
+			calculateResults(results, positions, swings)
 		}
 	}
 	
