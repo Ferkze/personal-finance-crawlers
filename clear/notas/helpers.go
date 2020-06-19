@@ -1,9 +1,12 @@
 package notas
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 func calculateAvgPrice(p1, p2 float64, q1, q2 int64)  float64 {
-	if q1 - q2 == 0 {
+	if q1 + q2 == 0 {
 		return 0
 	}
 	
@@ -13,11 +16,11 @@ func calculateAvgPrice(p1, p2 float64, q1, q2 int64)  float64 {
 	a1 := p1 * qf1
 	a2 := p2 * qf2
 
-	return (a1 + a2)/ (qf1 + qf2)
+	return math.Round((a1 + a2)*100/ (qf1 + qf2)) /100
 }
 
 func calculateResult(p1, p2 float64, q int64) float64 {
-	return (p2 * float64(q)) - (p1 * float64(q))
+	return math.Round(((p2 * float64(q)) - (p1 * float64(q)))*100)/100
 }
 
 // func appendResult(results Results, res Result) Results {
