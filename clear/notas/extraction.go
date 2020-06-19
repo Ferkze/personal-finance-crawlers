@@ -156,6 +156,7 @@ func extractSharesOrders(positions DayTradePositions, text string) (DayTradePosi
 			if !ok {
 				pos = Position{
 					Asset: asset,
+					AssetType: Shares,
 				}
 			}
 
@@ -192,16 +193,22 @@ func extractSharesOrders(positions DayTradePositions, text string) (DayTradePosi
 				if pos.Quant > 0 {
 					pos.Result += calculateResult(pos.Price, price, quant)
 				}
+				if quant - pos.Quant > 0 {
+					swingShortQuantity := quant - pos.Quant
+					pos.ShortVolume = math.Round(price * float64(swingShortQuantity) * 100) / 100
+				}
 				pos.Price = calculateAvgPrice(pos.Price, price, pos.Quant, -quant)
 				pos.Quant -= quant
 
 				pos.Total += total // A sell adds to total
-				pos.ShortVolume += total
 			}
 			pos.QuantityVolume += quant
 			pos.FinancialVolume += total
 			pos.Start = date
 			
+			if pos.Quant == 0 {
+				pos.ShortVolume = 0
+			}
 			positions[asset] = pos
 		}
 	}
