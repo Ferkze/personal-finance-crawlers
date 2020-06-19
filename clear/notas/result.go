@@ -11,7 +11,7 @@ func calculateResults(res Results, dayt DayTradePositions, swingt SwingTradePosi
 	dr := DailyResult{}
 	for k, v := range dayt {
 		if v.Quant != 0 {
-			fmt.Printf("Daytrade[%s] with Quant > 0: %#v", k, v)
+			fmt.Printf("Daytrade[%s] with Quant > 0: %#v\n", k, v)
 			continue
 		}
 		date = v.Start
@@ -27,24 +27,25 @@ func calculateResults(res Results, dayt DayTradePositions, swingt SwingTradePosi
 				Value: v.Result + dr.DayTradeShares.Value,
 			}
 		case IndFut:
-			dr.DayTradeFutures = Result{
+			dr.DayTradeFuturesIndex = Result{
 				AssetType: v.AssetType,
 				MarketType: MercadoFuturo,
 				Date: v.Start,
-				FinancialVolume: v.FinancialVolume + dr.DayTradeFutures.FinancialVolume,
-				ShortVolume: v.ShortVolume + dr.DayTradeFutures.ShortVolume,
-				Value: v.Result + dr.DayTradeFutures.Value,
+				FinancialVolume: v.FinancialVolume + dr.DayTradeFuturesIndex.FinancialVolume,
+				ShortVolume: v.ShortVolume + dr.DayTradeFuturesIndex.ShortVolume,
+				Value: v.Result + dr.DayTradeFuturesIndex.Value,
 			}
 		case DolFut:
-			dr.DayTradeFutures = Result{
+			dr.DayTradeFuturesDolar = Result{
 				AssetType: v.AssetType,
 				MarketType: MercadoFuturo,
 				Date: v.Start,
-				FinancialVolume: v.FinancialVolume + dr.DayTradeFutures.FinancialVolume,
-				ShortVolume: v.ShortVolume + dr.DayTradeFutures.ShortVolume,
-				Value: v.Result + dr.DayTradeFutures.Value,
+				FinancialVolume: v.FinancialVolume + dr.DayTradeFuturesDolar.FinancialVolume,
+				ShortVolume: v.ShortVolume + dr.DayTradeFuturesDolar.ShortVolume,
+				Value: v.Result + dr.DayTradeFuturesDolar.Value,
 			}
 		}
+		delete(dayt, k)
 	}
 	for k, v := range swingt {
 		currentVol := (math.Round(v.Price * float64(v.Quant)*100)/100)
