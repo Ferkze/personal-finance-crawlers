@@ -43,7 +43,7 @@ type Position struct {
 	Price           float64
 	Total           float64
 	AssetType       AssetType
-	Value           float64
+	Result          float64
 	ShortVolume     float64
 	QuantityVolume  int64
 	FinancialVolume float64
