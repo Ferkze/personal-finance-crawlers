@@ -3,6 +3,10 @@ package notas
 func updatePositions(daytrades DayTradePositions, swingtrades SwingTradePositions) {
 	for k, daytrade := range daytrades {
 		if daytrade.Quant == 0 {
+			if daytrade.Type == "" {
+				daytrade.Type = DayTrade
+			}
+			daytrades[k] = daytrade
 			continue
 		}
 		swing, ok := swingtrades[k]
@@ -41,6 +45,9 @@ func updatePositions(daytrades DayTradePositions, swingtrades SwingTradePosition
 
 		if daytrade.Result == 0 {
 			delete(daytrades, k)
+		} else {
+			daytrade.Type = DayTrade
+			daytrades[k] = daytrade
 		}
 	}
 }
