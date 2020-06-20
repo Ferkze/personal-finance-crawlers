@@ -20,10 +20,11 @@ func updatePositions(daytrades DayTradePositions, swingtrades SwingTradePosition
 				Quant: daytrade.Quant,
 				QuantityVolume: daytrade.QuantityVolume,
 				ShortVolume: daytrade.ShortVolume,
-				Total: daytrade.Total,
 				Type: SwingTrade,
 				Result: 0.0,
 			}
+			swing.Total = calculateTotal(swing.Price, swing.Quant)
+
 		} else { // Aumentar, diminuir ou encerrar posição
 			if (daytrade.Quant > 0 && swing.Quant < 0) || (daytrade.Quant < 0 && swing.Quant > 0) {
 				swing.Result += calculateResult(swing.Price, daytrade.Price, daytrade.Quant)
@@ -33,10 +34,11 @@ func updatePositions(daytrades DayTradePositions, swingtrades SwingTradePosition
 			swing.Start = daytrade.Start
 			swing.FinancialVolume += daytrade.FinancialVolume
 			swing.ShortVolume += daytrade.ShortVolume
-			swing.Total += daytrade.Total
-			swing.Quant += daytrade.Quant
 			swing.Price = calculateAvgPrice(swing.Price, daytrade.Price, swing.Quant, daytrade.Quant)
+			swing.Quant += daytrade.Quant
+			swing.Total = calculateTotal(swing.Price, swing.Quant)
 		}
+
 		swingtrades[k] = swing
 		
 		daytrade.Quant = 0
