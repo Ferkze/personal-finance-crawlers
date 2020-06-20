@@ -21,7 +21,7 @@ const (
 	// DolFut Dólar futuro
 	DolFut AssetType = "DolFut"
 	// Shares Ações
-	Shares AssetType = "Shares"
+	Shares AssetType = "Ações"
 )
 
 // OperationType tipo de ativo
