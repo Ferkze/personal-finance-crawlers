@@ -15,18 +15,25 @@ var results Results
 // ParsePDF reads and parses orders from broker pdf
 func ParsePDF() {
 	var err error
-	// err = unlockPdf("pdf/300450_NotaCorretagem.pdf", "pdf/nota-de-corretagem-maio-2020-UNLOCKED.pdf", "485")
-	// if err != nil {
-	// 	panic(err.Error())
-	// }
-	err = parse("pdf/nota-de-corretagem-maio-2020-UNLOCKED.pdf")
-	if err != nil {
-		panic(err.Error())
+	pdfs := []string{
+		"pdf/NotaCorretagem12.pdf",
+		"pdf/NotaCorretagem11.pdf",
 	}
-	return
+	for _, p := range pdfs {
+		if err = unlockPdf(p, p, "485") ; err != nil {
+			fmt.Printf("ERROR: Error unlocking pdf %q: %#v", p, err)
+			panic(err.Error())
+		}
+		if err = parse(p); err != nil {
+			fmt.Printf("ERROR: Error parsing pdf %q: %#v", p, err)
+			panic(err.Error())
+		}
+	}
 }
 
 func parse(inputPath string) error {
+	fmt.Printf("Parsing PDF %q\n", inputPath)
+	
 	f, err := os.Open(inputPath)
 	if err != nil {
 		return err
