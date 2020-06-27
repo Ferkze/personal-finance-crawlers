@@ -19,18 +19,30 @@ let results = dateKeys.map(k => {
 		if (!positions[trade.asset]) {
 			positions[trade.asset] = {
 				totalVolume: 0,
-				buyingVolume: 0,
+				totalBuyingVolume: 0,
+				totalSellingVolume: 0,
 				sellingVolume: 0,
 				buyQnt: 0,
 				sellingQnt: 0,
+				operation: ''
 			}
 		}
 		if (trade.qnt > 0) {
-			positions[trade.asset].buyingVolume += trade.price * trade.qnt
+			positions[trade.asset].totalBuyingVolume += trade.price * trade.qnt
 			positions[trade.asset].buyQnt += Math.abs(trade.qnt)
 		} else {
-			positions[trade.asset].sellingVolume += trade.price * Math.abs(trade.qnt)
+			positions[trade.asset].totalSellingVolume += trade.price * Math.abs(trade.qnt)
 			positions[trade.asset].sellingQnt += Math.abs(trade.qnt)
+		}
+		if (positions[trade.asset].buyQnt == positions[trade.asset].sellingQnt) {
+			positions[trade.asset].operation = 'daytrade'
+		} else if (positions[trade.asset].buyQnt != 0 && positions[trade.asset].sellingQnt != 0) {
+			positions[trade.asset].operation = 'mixed'
+		} else {
+			positions[trade.asset].operation = 'swingtrade'
+		}
+		if (positions[trade.asset].operation == 'swingtrade' && positions[trade.asset].sellingQnt > 0) {
+			positions[trade.asset].sellingVolume += trade.price * Math.abs(trade.qnt)
 		}
 		positions[trade.asset].totalVolume += Math.abs(trade.qnt) * trade.price
 		positions[trade.asset].date = trade.date
@@ -47,9 +59,10 @@ results = groupResultsByPeriod(results, 'month')
 
 printResults(results)
 
-function calculatePositionsResult(positions = {'ASSET': {totalVolume: 0, buyingVolume: 0, sellingVolume: 0, buyQnt: 0, sellingQnt: 0}}) {
+function calculatePositionsResult(positions = {'ASSET': {totalVolume: 0, totalBuyingVolume: 0, totalSellingVolume: 0, buyQnt: 0, sellingQnt: 0}}) {
 	const results = {
 		total: 0,
+		sold: 0,
 		costs: 0,
 		irrf: 0
 	}
@@ -59,16 +72,16 @@ function calculatePositionsResult(positions = {'ASSET': {totalVolume: 0, buyingV
 		}
 		if (position.buyQnt > position.sellingQnt && position.sellingQnt > 0) {
 			const excedent = position.buyQnt - position.sellingQnt
-			const buyVolDT = position.buyingVolume - ((position.buyingVolume/position.buyQnt)*excedent)
-			const res = position.sellingVolume - buyVolDT
+			const buyVolDT = position.totalBuyingVolume - ((position.totalBuyingVolume/position.buyQnt)*excedent)
+			const res = position.totalSellingVolume - buyVolDT
 			results.total += res
 		} else if (position.sellingQnt > position.buyQnt && position.buyQnt > 0) {
 			const excedent = position.sellingQnt - position.buyQnt
-			const shortVolDT = position.sellingVolume - ((position.sellingVolume/position.sellingQnt)*excedent)
-			const res = shortVolDT - position.buyingVolume
+			const shortVolDT = position.totalSellingVolume - ((position.totalSellingVolume/position.sellingQnt)*excedent)
+			const res = shortVolDT - position.totalBuyingVolume
 			results.total += res
 		} else {
-			const res = position.sellingVolume - position.buyingVolume
+			const res = position.totalSellingVolume - position.totalBuyingVolume
 			results.total += res
 		}
 	}
