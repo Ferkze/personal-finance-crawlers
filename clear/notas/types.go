@@ -22,6 +22,8 @@ const (
 	DolFut AssetType = "DolFut"
 	// Shares Ações
 	Shares AssetType = "Ações"
+	// FII Ações
+	FII AssetType = "FII"
 )
 
 // OperationType tipo de ativo

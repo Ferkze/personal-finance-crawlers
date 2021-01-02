@@ -9,6 +9,7 @@ func updatePositions(daytrades DayTradePositions, swingtrades SwingTradePosition
 			daytrades[k] = daytrade
 			continue
 		}
+		// fmt.Printf("Position [%s]: %v x %v = %v; Result: %v\n", k, daytrade.Price, daytrade.Quant, daytrade.Total, daytrade.Result)
 		swing, ok := swingtrades[k]
 		if !ok { // Abrir nova posição
 			swing = Position{
@@ -38,6 +39,8 @@ func updatePositions(daytrades DayTradePositions, swingtrades SwingTradePosition
 			swing.Quant += daytrade.Quant
 			swing.Total = calculateTotal(swing.Price, swing.Quant)
 		}
+
+		// fmt.Printf("Swing [%s]: %v x %v = %v\n", k, swing.Price, swing.Quant, swing.Total)
 
 		swingtrades[k] = swing
 		
