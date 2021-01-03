@@ -1,65 +1,84 @@
 const fs = require('fs');
+const {
+	filterOrdersByType,
+	filterOrdersByDate,
+	sortOrdersByDate
+} = require('./utils')
 
 console.info('Running shares script')
 
-let orders = JSON.parse(fs.readFileSync('orders.json'));
+/**
+ * @typedef {Object} Order
+ * @property {string} asset
+ * @property {string} assetType
+ * @property {number} qnt
+ * @property {number} price
+ * @property {string} date
+ */
 
-const shares = orders.filter(o => o.assetType == 'Ações')
-	.sort((a,b) => new Date(b.date) - new Date(a.date))
-	.map(o => {
-		o.date = o.date.substring(0, 10)
-		return o
-	})
+/**
+ * @type {Order[]}
+ */
+const ordersExtracted = JSON.parse(fs.readFileSync('orders.json'));
 
-const dateKeys = [...new Set(shares.map(o => o.date))]
-let results = dateKeys.map(k => {
-	const trades = shares.filter(o => o.date == k)
-	const positions = {}
-	for (const trade of trades) {
-		if (!positions[trade.asset]) {
-			positions[trade.asset] = {
-				totalVolume: 0,
-				totalBuyingVolume: 0,
-				totalSellingVolume: 0,
-				sellingVolume: 0,
-				buyQnt: 0,
-				sellingQnt: 0,
-				operation: ''
-			}
-		}
-		if (trade.qnt > 0) {
-			positions[trade.asset].totalBuyingVolume += trade.price * trade.qnt
-			positions[trade.asset].buyQnt += Math.abs(trade.qnt)
-		} else {
-			positions[trade.asset].totalSellingVolume += trade.price * Math.abs(trade.qnt)
-			positions[trade.asset].sellingQnt += Math.abs(trade.qnt)
-		}
-		if (positions[trade.asset].buyQnt == positions[trade.asset].sellingQnt) {
-			positions[trade.asset].operation = 'daytrade'
-		} else if (positions[trade.asset].buyQnt != 0 && positions[trade.asset].sellingQnt != 0) {
-			positions[trade.asset].operation = 'mixed'
-		} else {
-			positions[trade.asset].operation = 'swingtrade'
-		}
-		if (positions[trade.asset].operation == 'swingtrade' && positions[trade.asset].sellingQnt > 0) {
-			positions[trade.asset].sellingVolume += trade.price * Math.abs(trade.qnt)
-		}
-		positions[trade.asset].totalVolume += Math.abs(trade.qnt) * trade.price
-		positions[trade.asset].date = trade.date
-	}
+const orders = sortOrdersByDate(filterOrdersByType(ordersExtracted, 'Ações'))
+	.map(o => ({ ...o, date: o.date.substring(0, 10) }))
 
-	const result = calculatePositionsResult(positions)
-	result.date = k
-	result.month = k.substring(0,7)
-	
-	return { [k]: result }
+const results = groupResultsByPeriod(generateResults(orders), 'month')
+
+Object.keys(results).forEach(k => {
+	const r = results[k]
+	const format = val => val.toFixed(2).padStart(8, ' ')
+	console.log(`resultado do mês ${k}: R$ ${format(r.total - r.costs)}, irrf: R$ ${format(r.irrf)}`)
 })
 
-results = groupResultsByPeriod(results, 'month')
+function generateResults(orders) {
+	const dateKeys = [...new Set(orders.map(o => o.date))]
+	dateKeys.map(k => {
+		const trades = filterOrdersByDate(orders, date)
+		const positions = {}
+		for (const trade of trades) {
+			if (!positions[trade.asset]) {
+				positions[trade.asset] = {
+					totalVolume: 0,
+					totalBuyingVolume: 0,
+					totalSellingVolume: 0,
+					sellingVolume: 0,
+					buyQnt: 0,
+					sellingQnt: 0,
+					operation: ''
+				}
+			}
+			if (trade.qnt > 0) {
+				positions[trade.asset].totalBuyingVolume += trade.price * trade.qnt
+				positions[trade.asset].buyQnt += Math.abs(trade.qnt)
+			} else {
+				positions[trade.asset].totalSellingVolume += trade.price * Math.abs(trade.qnt)
+				positions[trade.asset].sellingQnt += Math.abs(trade.qnt)
+			}
+			if (positions[trade.asset].buyQnt == positions[trade.asset].sellingQnt) {
+				positions[trade.asset].operation = 'daytrade'
+			} else if (positions[trade.asset].buyQnt != 0 && positions[trade.asset].sellingQnt != 0) {
+				positions[trade.asset].operation = 'mixed'
+			} else {
+				positions[trade.asset].operation = 'swingtrade'
+			}
+			if (positions[trade.asset].operation == 'swingtrade' && positions[trade.asset].sellingQnt > 0) {
+				positions[trade.asset].sellingVolume += trade.price * Math.abs(trade.qnt)
+			}
+			positions[trade.asset].totalVolume += Math.abs(trade.qnt) * trade.price
+			positions[trade.asset].date = trade.date
+		}
 
-printResults(results)
+		const result = calculatePositionsResult(positions)
+		result.date = k
+		result.month = k.substring(0, 7)
 
-function calculatePositionsResult(positions = {'ASSET': {totalVolume: 0, totalBuyingVolume: 0, totalSellingVolume: 0, buyQnt: 0, sellingQnt: 0}}) {
+		return { [k]: result }
+	})
+}
+
+function calculatePositionsResult(positions = { 'ASSET': { totalVolume: 0, totalBuyingVolume: 0, totalSellingVolume: 0, buyQnt: 0, sellingQnt: 0 } }) {
 	const results = {
 		total: 0,
 		sold: 0,
@@ -72,12 +91,12 @@ function calculatePositionsResult(positions = {'ASSET': {totalVolume: 0, totalBu
 		}
 		if (position.buyQnt > position.sellingQnt && position.sellingQnt > 0) {
 			const excedent = position.buyQnt - position.sellingQnt
-			const buyVolDT = position.totalBuyingVolume - ((position.totalBuyingVolume/position.buyQnt)*excedent)
+			const buyVolDT = position.totalBuyingVolume - ((position.totalBuyingVolume / position.buyQnt) * excedent)
 			const res = position.totalSellingVolume - buyVolDT
 			results.total += res
 		} else if (position.sellingQnt > position.buyQnt && position.buyQnt > 0) {
 			const excedent = position.sellingQnt - position.buyQnt
-			const shortVolDT = position.totalSellingVolume - ((position.totalSellingVolume/position.sellingQnt)*excedent)
+			const shortVolDT = position.totalSellingVolume - ((position.totalSellingVolume / position.sellingQnt) * excedent)
 			const res = shortVolDT - position.totalBuyingVolume
 			results.total += res
 		} else {
@@ -93,16 +112,16 @@ function calculatePositionsResult(positions = {'ASSET': {totalVolume: 0, totalBu
 	return results
 }
 
-function groupResultsByPeriod(results, period='month') {
+function groupResultsByPeriod(results, period = 'month') {
 	return results.reduce((acc, cur) => {
 		const key = Object.keys(cur)[0]
 		let periodKey
-		switch(period) {
+		switch (period) {
 			case 'month':
 				periodKey = cur[key].month
 				break
 			case 'year':
-				periodKey = cur[key].month.substring(0,4)
+				periodKey = cur[key].month.substring(0, 4)
 				break
 		}
 		if (!acc[periodKey]) {
@@ -119,12 +138,4 @@ function groupResultsByPeriod(results, period='month') {
 		acc[periodKey].costs += cur[key].costs
 		return acc
 	}, {})
-}
-
-function printResults(results) {
-	Object.keys(results).forEach(k => {
-		const r = results[k]
-		console.log(`resultado do mês ${k}: R$ ${(r.total - r.costs).toFixed(2).padStart(8, ' ')}, irrf: R$ ${r.irrf.toFixed(2).padStart(8, ' ')}`)
-	})
-
 }
